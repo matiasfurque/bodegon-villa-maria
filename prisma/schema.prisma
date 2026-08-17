@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique
+  descripcion String?
+  users       User[]
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  nombre         String
+  apellido       String
+  usuario        String    @unique
+  passwordHash   String
+  estado         Boolean   @default(true)
+  telefono       String?
+  email          String?
+  roleId         Int
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  role           Role      @relation(fields: [roleId], references: [id])
+  pedidos        Pedido[]
+  cuentasCerradas Cuenta[]
+}
+
+model Mesa {
+  id          Int       @id @default(autoincrement())
+  numero      Int       @unique
+  descripcion String?
+  capacidad   Int
+  estado      String    @default("Libre")
+  abiertaAt   DateTime?
+  abiertaPor  Int?
+  activa      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  pedidos     Pedido[]
+  cuentas     Cuenta[]
+}
+
+model CategoriaProducto {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique
+  orden     Int?
+  visible   Boolean    @default(true)
+  productos Producto[]
+}
+
+model Producto {
+  id           Int       @id @default(autoincrement())
+  nombre       String
+  descripcion  String?
+  precio       Decimal
+  activo       Boolean   @default(true)
+  visibleMenu  Boolean   @default(true)
+  categoriaId  Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  categoria    CategoriaProducto @relation(fields: [categoriaId], references: [id])
+  items        PedidoItem[]
+}
+
+model Pedido {
+  id          Int       @id @default(autoincrement())
+  mesaId      Int
+  usuarioId   Int
+  fechaHora   DateTime  @default(now())
+  estado      String    @default("Activo")
+  observacion String?
+  mesa        Mesa      @relation(fields: [mesaId], references: [id])
+  usuario     User      @relation(fields: [usuarioId], references: [id])
+  items       PedidoItem[]
+}
+
+model PedidoItem {
+  id             Int      @id @default(autoincrement())
+  pedidoId       Int
+  productoId     Int
+  cantidad       Int
+  precioUnitario Decimal
+  subtotal       Decimal
+  observacion    String?
+  anulado        Boolean  @default(false)
+  motivoAnulacion String?
+  pedido         Pedido   @relation(fields: [pedidoId], references: [id])
+  producto       Producto @relation(fields: [productoId], references: [id])
+}
+
+model Cuenta {
+  id              Int      @id @default(autoincrement())
+  mesaId          Int
+  usuarioCierreId Int
+  fechaCierre     DateTime @default(now())
+  total           Decimal
+  metodoPago      String   @default("Efectivo")
+  montoRecibido   Decimal  @default(0)
+  vuelto          Decimal  @default(0)
+  estado          String   @default("Cerrada")
+  detalleJson     String
+  mesa            Mesa     @relation(fields: [mesaId], references: [id])
+  usuarioCierre   User     @relation(fields: [usuarioCierreId], references: [id])
+}
