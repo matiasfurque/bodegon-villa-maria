@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { asBool, json, requireAdmin } from "@/lib/api";
-import { hashPassword } from "@/lib/password";
+import { hashPassword, validatePasswordStrength } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +30,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     estado: asBool(data.estado),
     roleId: Number(data.roleId)
   };
-  if (data.password) update.passwordHash = hashPassword(data.password);
+  if (data.password) {
+    const strengthError = validatePasswordStrength(String(data.password));
+    if (strengthError) return json({ error: strengthError }, 400);
+    update.passwordHash = hashPassword(data.password);
+  }
   const user = await prisma.user.update({
     where: { id: userId },
     data: update,

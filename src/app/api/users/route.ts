@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { asBool, json, requireAdmin } from "@/lib/api";
-import { hashPassword } from "@/lib/password";
+import { hashPassword, validatePasswordStrength } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: "El email no tiene un formato válido" }, 400);
   }
+  const strengthError = validatePasswordStrength(String(data.password));
+  if (strengthError) return json({ error: strengthError }, 400);
   const existing = await prisma.user.findUnique({ where: { usuario } });
   if (existing) return json({ error: "Ya existe un usuario con ese nombre de usuario" }, 400);
   try {

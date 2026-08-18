@@ -6,8 +6,8 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [usuario, setUsuario] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [usuario, setUsuario] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +20,7 @@ export default function LoginPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ usuario, password })
     });
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     setLoading(false);
     if (!response.ok) {
       setError(data.error || "No se pudo iniciar sesion");
@@ -37,17 +37,16 @@ export default function LoginPage() {
         <p className="muted">Ingreso interno para gestionar mesas, pedidos, caja y reportes.</p>
         <div className="field">
           <label>Usuario</label>
-          <input value={usuario} onChange={(event) => setUsuario(event.target.value)} />
+          <input autoComplete="username" value={usuario} onChange={(event) => setUsuario(event.target.value)} />
         </div>
         <div className="field">
           <label>Contraseña</label>
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          <input autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
         </div>
         {error && <p className="error">{error}</p>}
         <button className="btn primary" type="submit" disabled={loading}>
           {loading ? "Ingresando..." : "Ingresar"}
         </button>
-        <p className="muted">Admin demo: admin / admin123</p>
         <Link className="muted" href="/">
           Volver al sitio publico
         </Link>

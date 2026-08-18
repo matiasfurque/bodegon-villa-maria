@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, ChevronDown, Edit3, LogOut, Minus, Plus, Receipt, RefreshCcw, Save, Search, Trash2 } from "lucide-react";
+import { BarChart3, ChevronDown, Edit3, KeyRound, LogOut, Minus, Plus, Receipt, RefreshCcw, Save, Search, Trash2 } from "lucide-react";
 import { money } from "@/lib/money";
 
 type Role = { id: number; nombre: string };
@@ -63,6 +63,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const [reportFrom, setReportFrom] = useState("");
   const [reportTo, setReportTo] = useState("");
   const [showCloseAccount, setShowCloseAccount] = useState(false);
+  const [showSecurity, setShowSecurity] = useState(false);
   const [message, setMessage] = useState("");
   const isAdmin = user.role.nombre === "Administrador";
 
@@ -297,6 +298,21 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     router.refresh();
   }
 
+  async function changeOwnPassword(body: Record<string, unknown>) {
+    try {
+      setMessage("");
+      await api("/api/auth/password", {
+        method: "PATCH",
+        body: JSON.stringify(body)
+      });
+      setShowSecurity(false);
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo cambiar la contraseña");
+    }
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -307,6 +323,9 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           </p>
         </div>
         <div className="actions">
+          <button className="btn" onClick={() => setShowSecurity(true)}>
+            <KeyRound size={17} /> Mi seguridad
+          </button>
           <button className="btn" onClick={() => loadAll()}>
             <RefreshCcw size={17} /> Actualizar
           </button>
@@ -733,6 +752,13 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         />
       )}
       {selectedCuenta && <HistoryDetailDialog cuenta={selectedCuenta} onClose={() => setSelectedCuenta(null)} />}
+      {showSecurity && (
+        <SecurityDialog
+          user={user}
+          onCancel={() => setShowSecurity(false)}
+          onSubmit={changeOwnPassword}
+        />
+      )}
       {confirmAction && (
         <ConfirmDialog
           action={confirmAction}
@@ -741,6 +767,53 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         />
       )}
     </main>
+  );
+}
+
+function SecurityDialog({
+  user,
+  onCancel,
+  onSubmit
+}: {
+  user: AuthUser;
+  onCancel: () => void;
+  onSubmit: (body: Record<string, unknown>) => Promise<void> | void;
+}) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const isValid = currentPassword.length > 0 && newPassword.length >= 8 && confirmPassword.length > 0;
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!isValid) return;
+    await onSubmit({ currentPassword, newPassword, confirmPassword });
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="security-title">
+        <div className="security-mark">
+          <KeyRound size={24} />
+        </div>
+        <h2 id="security-title">Mi seguridad</h2>
+        <p className="muted">
+          {user.nombre} {user.apellido} · {user.usuario}
+        </p>
+        <form className="form-grid security-form" onSubmit={submit}>
+          <Field label="Contraseña actual" type="password" value={currentPassword} onChange={setCurrentPassword} wide />
+          <Field label="Nueva contraseña" type="password" value={newPassword} onChange={setNewPassword} wide />
+          <Field label="Confirmar nueva contraseña" type="password" value={confirmPassword} onChange={setConfirmPassword} wide />
+          <p className="muted wide">Usá al menos 8 caracteres, con letras y numeros. Evitá claves demo como admin123.</p>
+          <div className="actions modal-actions wide">
+            <button className="btn" type="button" onClick={onCancel}>Cancelar</button>
+            <button className="btn primary" disabled={!isValid} type="submit">
+              <Save size={17} /> Cambiar contraseña
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
 

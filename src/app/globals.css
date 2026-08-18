@@ -882,6 +882,20 @@ button:disabled {
   color: var(--danger);
 }
 
+.security-mark {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #e6f4ee;
+  color: var(--accent);
+}
+
+.security-form {
+  margin-top: 12px;
+}
+
 .detail-empty {
   border: 1px dashed var(--line);
   border-radius: 8px;
