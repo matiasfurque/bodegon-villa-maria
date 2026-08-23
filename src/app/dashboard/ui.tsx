@@ -483,7 +483,6 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           <button className="btn" onClick={refreshAll} disabled={refreshing}>
             <RefreshCcw className={refreshing ? "spin-icon" : ""} size={17} /> Actualizar
           </button>
-          <span className="sync-hint">Sincroniza cada 5s</span>
           <button className="btn danger" onClick={logout}>
             <LogOut size={17} /> Salir
           </button>

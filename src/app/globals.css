@@ -577,18 +577,6 @@ button:disabled {
   font-size: 14px;
 }
 
-.sync-hint {
-  align-self: center;
-  border: 1px solid rgba(19, 78, 47, 0.16);
-  border-radius: 999px;
-  padding: 6px 9px;
-  background: #e6f4ee;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
 .reset-test-link {
   width: 100%;
   justify-content: center;
