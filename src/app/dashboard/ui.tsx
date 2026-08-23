@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, ChefHat, ChevronDown, Edit3, KeyRound, LogOut, Minus, Plus, Receipt, RefreshCcw, Save, Search, Table2, Trash2 } from "lucide-react";
@@ -20,6 +20,7 @@ type Cuenta = { id: number; fechaCierre: string; total: string; metodoPago: Paym
 type CuentaDetalleItem = { id: number; pedidoId: number; producto: string; cantidad: number; precioUnitario: number; subtotal: number; observacion?: string | null };
 type Report = { from: string; to: string; totalDia: number; totalPeriodo: number; cuentasHoy: number; cuentasPeriodo: number; mesasOcupadas: number; mesasAtendidasHoy: number; mesasAtendidasPeriodo: number; pedidosAnulados: number; cobrosPorMetodo: Array<{ metodo: string; cantidad: number; total: number }>; productosMasVendidos: Array<{ producto: string; cantidad: number; total: number }> };
 type ConfirmAction = { title: string; message: string; confirmLabel: string; onConfirm: () => Promise<void> };
+type SelectOption = { value: string | number; label: string };
 
 const tabs = ["Inicio", "Operaciones", "Cocina", "Productos", "Usuarios", "Reportes", "Historial"];
 const employeeTabs = ["Operaciones"];
@@ -728,35 +729,48 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
               </label>
               <label className="field">
                 Categoria
-                <select value={productCategoryFilter} onChange={(event) => setProductCategoryFilter(event.target.value)}>
-                  <option value="todas">Todas</option>
-                  {categorias.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
-                </select>
+                <PrettySelect
+                  value={productCategoryFilter}
+                  onChange={(value) => setProductCategoryFilter(String(value))}
+                  options={[{ value: "todas", label: "Todas" }, ...categorias.map((categoria) => ({ value: categoria.id, label: categoria.nombre }))]}
+                />
               </label>
               <label className="field">
                 Estado
-                <select value={productStatusFilter} onChange={(event) => setProductStatusFilter(event.target.value)}>
-                  <option value="todos">Todos</option>
-                  <option value="activos">Activos</option>
-                  <option value="inactivos">Inactivos</option>
-                </select>
+                <PrettySelect
+                  value={productStatusFilter}
+                  onChange={(value) => setProductStatusFilter(String(value))}
+                  options={[
+                    { value: "todos", label: "Todos" },
+                    { value: "activos", label: "Activos" },
+                    { value: "inactivos", label: "Inactivos" }
+                  ]}
+                />
               </label>
               <label className="field">
                 Menu
-                <select value={productVisibilityFilter} onChange={(event) => setProductVisibilityFilter(event.target.value)}>
-                  <option value="todos">Todos</option>
-                  <option value="visibles">Visible</option>
-                  <option value="ocultos">Oculto</option>
-                </select>
+                <PrettySelect
+                  value={productVisibilityFilter}
+                  onChange={(value) => setProductVisibilityFilter(String(value))}
+                  options={[
+                    { value: "todos", label: "Todos" },
+                    { value: "visibles", label: "Visible" },
+                    { value: "ocultos", label: "Oculto" }
+                  ]}
+                />
               </label>
               <label className="field">
                 Orden
-                <select value={productSort} onChange={(event) => setProductSort(event.target.value)}>
-                  <option value="nombre">Nombre</option>
-                  <option value="categoria">Categoria</option>
-                  <option value="precio">Precio</option>
-                  <option value="estado">Estado</option>
-                </select>
+                <PrettySelect
+                  value={productSort}
+                  onChange={(value) => setProductSort(String(value))}
+                  options={[
+                    { value: "nombre", label: "Nombre" },
+                    { value: "categoria", label: "Categoria" },
+                    { value: "precio", label: "Precio" },
+                    { value: "estado", label: "Estado" }
+                  ]}
+                />
               </label>
               <button
                 className="btn product-filter-reset"
@@ -853,18 +867,23 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
               </label>
               <label className="field">
                 Rol
-                <select value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
-                  <option value="todos">Todos</option>
-                  {roles.map((role) => <option key={role.id} value={role.id}>{role.nombre}</option>)}
-                </select>
+                <PrettySelect
+                  value={userRoleFilter}
+                  onChange={(value) => setUserRoleFilter(String(value))}
+                  options={[{ value: "todos", label: "Todos" }, ...roles.map((role) => ({ value: role.id, label: role.nombre }))]}
+                />
               </label>
               <label className="field">
                 Estado
-                <select value={userStatusFilter} onChange={(event) => setUserStatusFilter(event.target.value)}>
-                  <option value="todos">Todos</option>
-                  <option value="activos">Activos</option>
-                  <option value="inactivos">Inactivos</option>
-                </select>
+                <PrettySelect
+                  value={userStatusFilter}
+                  onChange={(value) => setUserStatusFilter(String(value))}
+                  options={[
+                    { value: "todos", label: "Todos" },
+                    { value: "activos", label: "Activos" },
+                    { value: "inactivos", label: "Inactivos" }
+                  ]}
+                />
               </label>
               <button
                 className="btn product-filter-reset"
@@ -1000,10 +1019,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           <div className="form-grid">
             <label className="field">
               Mesa
-              <select value={historyMesaId} onChange={(event) => setHistoryMesaId(event.target.value)}>
-                <option value="">Todas</option>
-                {mesas.map((mesa) => <option value={mesa.id} key={mesa.id}>Mesa {mesa.numero}</option>)}
-              </select>
+              <PrettySelect
+                value={historyMesaId}
+                onChange={(value) => setHistoryMesaId(String(value))}
+                options={[{ value: "", label: "Todas" }, ...mesas.map((mesa) => ({ value: mesa.id, label: `Mesa ${mesa.numero}` }))]}
+              />
             </label>
             <Field label="Desde" type="date" value={historyFrom} onChange={setHistoryFrom} />
             <Field label="Hasta" type="date" value={historyTo} onChange={setHistoryTo} />
@@ -1181,9 +1201,11 @@ function ProductForm({ categorias, product, onCancel, onSubmit }: { categorias: 
       <Field label="Precio" type="number" value={body.precio} onChange={(precio) => setBody({ ...body, precio: Number(precio) })} />
       <label className="field wide">
         Categoria
-        <select value={body.categoriaId} onChange={(e) => setBody({ ...body, categoriaId: Number(e.target.value) })}>
-          {categorias.map((cat) => <option value={cat.id} key={cat.id}>{cat.nombre}</option>)}
-        </select>
+        <PrettySelect
+          value={body.categoriaId}
+          onChange={(value) => setBody({ ...body, categoriaId: Number(value) })}
+          options={categorias.map((cat) => ({ value: cat.id, label: cat.nombre }))}
+        />
       </label>
       <Field label="Descripcion" value={body.descripcion} onChange={(descripcion) => setBody({ ...body, descripcion })} wide />
       <label className="check"><input type="checkbox" checked={body.activo} onChange={(event) => setBody({ ...body, activo: event.target.checked })} /> Activo</label>
@@ -1265,9 +1287,11 @@ function UserForm({ roles, user, onCancel, onSubmit }: { roles: Role[]; user: Us
       <Field label="Telefono" value={body.telefono} onChange={(telefono) => setBody({ ...body, telefono })} />
       <label className="field">
         Rol
-        <select value={body.roleId} onChange={(e) => setBody({ ...body, roleId: Number(e.target.value) })}>
-          {roles.map((role) => <option value={role.id} key={role.id}>{role.nombre}</option>)}
-        </select>
+        <PrettySelect
+          value={body.roleId}
+          onChange={(value) => setBody({ ...body, roleId: Number(value) })}
+          options={roles.map((role) => ({ value: role.id, label: role.nombre }))}
+        />
       </label>
       <label className="check"><input type="checkbox" checked={body.estado} onChange={(event) => setBody({ ...body, estado: event.target.checked })} /> Activo</label>
       {!isValid && <p className="error wide">Nombre, apellido, usuario, rol y contraseña al crear son obligatorios. Si cargás email, debe ser válido.</p>}
@@ -1524,12 +1548,16 @@ function CloseAccountDialog({
         <div className="payment-box">
           <label className="field wide">
             Metodo de pago
-            <select value={metodoPago} onChange={(event) => setMetodoPago(event.target.value as PaymentMethod)}>
-              <option value="Efectivo">Efectivo</option>
-              <option value="Debito">Debito</option>
-              <option value="Credito">Credito</option>
-              <option value="Transferencia">Transferencia</option>
-            </select>
+            <PrettySelect
+              value={metodoPago}
+              onChange={(value) => setMetodoPago(String(value) as PaymentMethod)}
+              options={[
+                { value: "Efectivo", label: "Efectivo" },
+                { value: "Debito", label: "Debito" },
+                { value: "Credito", label: "Credito" },
+                { value: "Transferencia", label: "Transferencia" }
+              ]}
+            />
           </label>
 
           {metodoPago === "Efectivo" ? (
@@ -1743,6 +1771,71 @@ function Field({ label, value, onChange, type = "text", wide = false }: { label:
       {label}
       <input type={type} value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
+  );
+}
+
+function PrettySelect({
+  value,
+  options,
+  onChange,
+  placeholder = "Seleccionar"
+}: {
+  value: string | number;
+  options: SelectOption[];
+  onChange: (value: string | number) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => String(option.value) === String(value));
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [open]);
+
+  return (
+    <div className="pretty-select" ref={rootRef}>
+      <button
+        aria-expanded={open}
+        className={`pretty-select-trigger ${open ? "open" : ""}`}
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{selected?.label || placeholder}</span>
+        <ChevronDown size={17} />
+      </button>
+      {open && (
+        <div className="pretty-select-menu" role="listbox">
+          {options.map((option) => {
+            const active = String(option.value) === String(value);
+            return (
+              <button
+                className={`pretty-select-option ${active ? "active" : ""}`}
+                key={`${option.value}`}
+                role="option"
+                aria-selected={active}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
