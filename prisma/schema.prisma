@@ -29,6 +29,20 @@ model User {
   role           Role      @relation(fields: [roleId], references: [id])
   pedidos        Pedido[]
   cuentasCerradas Cuenta[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Mesa {

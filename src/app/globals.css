@@ -275,6 +275,70 @@ button:disabled {
   width: min(440px, 100%);
 }
 
+.auth-card {
+  display: grid;
+  gap: 4px;
+}
+
+.auth-eyebrow {
+  width: fit-content;
+  border: 1px solid rgba(19, 78, 47, 0.2);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #e6f4ee;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.login-actions {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.login-actions .btn {
+  width: min(220px, 100%);
+  justify-content: center;
+}
+
+.reset-test-link {
+  width: 100%;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.auth-message,
+.password-hint {
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 0;
+}
+
+.auth-message.notice {
+  background: #e6f4ee;
+  color: var(--accent-strong);
+}
+
+.auth-message.error {
+  background: #fee2e2;
+}
+
+.password-hint {
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.auth-card .field {
+  margin-bottom: 6px;
+}
+
 .field {
   display: grid;
   gap: 7px;

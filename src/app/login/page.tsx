@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="login-wrap"><section className="login-card"><h1>Villa Maria</h1></section></main>}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const params = useSearchParams();
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -43,13 +52,19 @@ export default function LoginPage() {
           <label>Contraseña</label>
           <input autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
         </div>
+        {params.get("passwordReset") === "1" && <p className="auth-message notice">Contraseña actualizada. Ingresá con tu nueva clave.</p>}
         {error && <p className="error">{error}</p>}
-        <button className="btn primary" type="submit" disabled={loading}>
-          {loading ? "Ingresando..." : "Ingresar"}
-        </button>
-        <Link className="muted" href="/">
-          Volver al sitio publico
-        </Link>
+        <div className="login-actions">
+          <button className="btn primary" type="submit" disabled={loading}>
+            {loading ? "Ingresando..." : "Ingresar"}
+          </button>
+          <Link className="muted" href="/recuperar-contrasena">
+            Olvidé mi contraseña
+          </Link>
+          <Link className="muted" href="/">
+            Volver al sitio publico
+          </Link>
+        </div>
       </form>
     </main>
   );
