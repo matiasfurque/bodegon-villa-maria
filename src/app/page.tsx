@@ -6,16 +6,22 @@ import { money } from "@/lib/money";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const categorias = await prisma.categoriaProducto.findMany({
-    where: { visible: true },
-    orderBy: [{ orden: "asc" }, { nombre: "asc" }],
-    include: {
-      productos: {
-        where: { activo: true, visibleMenu: true },
-        orderBy: { nombre: "asc" }
+  let menuDisponible = true;
+  const categorias = await prisma.categoriaProducto
+    .findMany({
+      where: { visible: true },
+      orderBy: [{ orden: "asc" }, { nombre: "asc" }],
+      include: {
+        productos: {
+          where: { activo: true, visibleMenu: true },
+          orderBy: { nombre: "asc" }
+        }
       }
-    }
-  });
+    })
+    .catch(() => {
+      menuDisponible = false;
+      return [];
+    });
 
   return (
     <main className="public-shell">
@@ -57,26 +63,38 @@ export default async function HomePage() {
             <p className="muted">Carta simple, abundante y actualizada desde el sistema interno.</p>
           </div>
         </div>
-        <div className="menu-grid">
-          {categorias.map((categoria) => (
-            <article className="panel menu-category" key={categoria.id}>
-              <h3>{categoria.nombre}</h3>
-              {categoria.productos.length === 0 ? (
-                <p className="muted">Sin productos visibles.</p>
-              ) : (
-                categoria.productos.map((producto) => (
-                  <div className="menu-item" key={producto.id}>
-                    <div>
-                      <strong>{producto.nombre}</strong>
-                      <p className="muted">{producto.descripcion}</p>
-                    </div>
-                    <strong>{money(producto.precio)}</strong>
-                  </div>
-                ))
-              )}
-            </article>
-          ))}
-        </div>
+        {!menuDisponible ? (
+          <div className="panel public-empty-state">
+            <h3>Menu no disponible momentaneamente</h3>
+            <p className="muted">Estamos actualizando la carta. Probá nuevamente en unos minutos.</p>
+          </div>
+        ) : (
+          <div className="menu-grid public-menu-list">
+            {categorias.map((categoria) => (
+              <details className="panel menu-category" key={categoria.id}>
+                <summary>
+                  <h3>{categoria.nombre}</h3>
+                  <span>{categoria.productos.length} productos</span>
+                </summary>
+                <div className="menu-category-body">
+                  {categoria.productos.length === 0 ? (
+                    <p className="muted">Sin productos visibles.</p>
+                  ) : (
+                    categoria.productos.map((producto) => (
+                      <div className="menu-item" key={producto.id}>
+                        <div>
+                          <strong>{producto.nombre}</strong>
+                          <p className="muted">{producto.descripcion}</p>
+                        </div>
+                        <strong>{money(producto.precio)}</strong>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
+        )}
       </section>
 
       <section id="contacto" className="public-section">

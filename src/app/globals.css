@@ -245,6 +245,67 @@ button:disabled {
   overflow: hidden;
 }
 
+.public-menu-list {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+  gap: 12px;
+}
+
+.menu-category summary {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  padding-top: 4px;
+}
+
+.menu-category summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu-category summary h3 {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.menu-category summary span {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: white;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.menu-category summary::after {
+  content: "+";
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #e6f4ee;
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.menu-category[open] summary::after {
+  content: "-";
+}
+
+.menu-category-body {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+}
+
 .menu-category::before {
   content: "";
   position: absolute;
@@ -326,9 +387,31 @@ button:disabled {
   border-top: 1px solid var(--line);
 }
 
-.menu-item strong,
+.menu-item > strong,
 .nowrap {
   white-space: nowrap;
+}
+
+.public-shell .menu-item {
+  align-items: flex-start;
+}
+
+.public-shell .menu-item p {
+  margin: 8px 0 0;
+  line-height: 1.25;
+}
+
+.public-empty-state {
+  max-width: 620px;
+}
+
+.public-empty-state h3 {
+  margin: 0 0 8px;
+  color: var(--accent);
+}
+
+.public-empty-state p {
+  margin: 0;
 }
 
 .login-wrap {
@@ -342,7 +425,7 @@ button:disabled {
 }
 
 .login-card {
-  width: min(440px, 100%);
+  width: min(440px, calc(100vw - 32px));
 }
 
 .auth-card {
@@ -1421,5 +1504,170 @@ button:disabled {
 
   .payment-summary {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-inner,
+  .public-section,
+  .app-shell {
+    width: min(100% - 20px, 1180px);
+  }
+
+  .app-shell {
+    padding: 14px 0 36px;
+  }
+
+  .app-header .actions,
+  .section-head .actions,
+  .quick-actions,
+  .modal-actions {
+    width: 100%;
+  }
+
+  .app-header .actions .btn,
+  .quick-actions .btn,
+  .modal-actions .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+  }
+
+  .panel,
+  .card,
+  .login-card {
+    padding: 14px;
+  }
+
+  .section-head {
+    margin-bottom: 16px;
+  }
+
+  .section-head h2,
+  .panel h2,
+  .login-card h1 {
+    font-size: 24px;
+  }
+
+  .stats-grid,
+  .cards-grid,
+  .menu-grid,
+  .product-picker,
+  .kitchen-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-section {
+    padding: 34px 0;
+  }
+
+  .public-menu-list {
+    gap: 8px;
+  }
+
+  .menu-category summary {
+    min-height: 54px;
+  }
+
+  .menu-category summary span {
+    display: none;
+  }
+
+  .public-shell .menu-item {
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 0;
+  }
+
+  .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 8px;
+  }
+
+  .product-badges,
+  .table .actions,
+  .pedido-head,
+  .draft-order-item,
+  .payment-note,
+  .open-table-row,
+  .recent-row,
+  .kitchen-ticket-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .table .actions .btn,
+  .draft-order-item .actions .btn {
+    justify-content: center;
+  }
+
+  .table-partial,
+  .account-total,
+  .draft-order-total {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-hero h2 {
+    font-size: 26px;
+  }
+
+  .dashboard-hero-total strong {
+    font-size: 28px;
+  }
+
+  .report-row {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .kitchen-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-backdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+    padding: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero-inner,
+  .public-section,
+  .app-shell {
+    width: min(100% - 14px, 1180px);
+  }
+
+  .btn,
+  .tab,
+  .pretty-select-trigger {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .compact-form input,
+  .compact-form input[aria-label="Descripcion"] {
+    width: 100%;
   }
 }
