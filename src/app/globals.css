@@ -258,6 +258,50 @@ button:disabled {
   outline-offset: 2px;
 }
 
+.table-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 178px;
+  text-align: center;
+}
+
+.table-card-main {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.table-card-main h3,
+.table-card-main p {
+  margin: 0;
+}
+
+.table-partial {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(19, 132, 120, 0.08);
+  border: 1px solid rgba(19, 132, 120, 0.22);
+  border-radius: 8px;
+  color: var(--accent);
+}
+
+.table-partial span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.table-partial strong {
+  white-space: nowrap;
+  font-size: 18px;
+}
+
 .menu-item {
   display: flex;
   justify-content: space-between;

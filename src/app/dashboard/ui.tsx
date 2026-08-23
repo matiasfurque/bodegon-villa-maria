@@ -168,6 +168,10 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
 
     return Array.from(byMesa.values()).sort((a, b) => (a.mesa?.numero || 0) - (b.mesa?.numero || 0));
   }, [allPedidos, mesas]);
+  const activePedidosByMesa = useMemo(
+    () => new Map(activePedidosResumen.map((item) => [item.mesa?.id || 0, item])),
+    [activePedidosResumen]
+  );
   const dashboardStats = useMemo(() => {
     const mesasActivas = mesas.filter((mesa) => mesa.activa);
     const mesasOcupadas = mesasActivas.filter((mesa) => mesa.estado === "Ocupada").length;
@@ -225,25 +229,25 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }
 
   async function loadAll() {
-    const [mesasData, categoriasData, productosData] = await Promise.all([
+    const [mesasData, categoriasData, productosData, allPedidosData] = await Promise.all([
       api("/api/mesas"),
       api("/api/categories"),
-      api("/api/products")
+      api("/api/products"),
+      api("/api/pedidos")
     ]);
     setMesas(mesasData);
     setCategorias(categoriasData);
     setProductos(productosData);
+    setAllPedidos(allPedidosData);
     if (isAdmin) {
-      const [rolesData, usersData, reportData, allPedidosData] = await Promise.all([
+      const [rolesData, usersData, reportData] = await Promise.all([
         api("/api/roles"),
         api("/api/users"),
-        api("/api/reports"),
-        api("/api/pedidos")
+        api("/api/reports")
       ]);
       setRoles(rolesData);
       setUsers(usersData);
       setReport(reportData);
-      setAllPedidos(allPedidosData);
       await loadCuentas();
     }
     const mesaId = selectedMesaId || mesasData[0]?.id;
@@ -533,13 +537,24 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
               />
             </div>
             <div className="cards-grid">
-              {mesas.filter((mesa) => mesa.activa).map((mesa) => (
-                <button className={`card ${selectedMesa?.id === mesa.id ? "selected" : ""}`} key={mesa.id} onClick={() => selectMesa(mesa.id)}>
-                  <h3>Mesa {mesa.numero}</h3>
-                  <p className={`status ${mesa.estado}`}>{mesa.estado}</p>
-                  <p className="muted">{mesa.capacidad} personas · {mesa.descripcion || "Sin descripcion"}</p>
-                </button>
-              ))}
+              {mesas.filter((mesa) => mesa.activa).map((mesa) => {
+                const mesaResumen = activePedidosByMesa.get(mesa.id);
+                return (
+                  <button className={`card table-card ${selectedMesa?.id === mesa.id ? "selected" : ""}`} key={mesa.id} onClick={() => selectMesa(mesa.id)}>
+                    <div className="table-card-main">
+                      <h3>Mesa {mesa.numero}</h3>
+                      <p className={`status ${mesa.estado}`}>{mesa.estado}</p>
+                      <p className="muted">{mesa.capacidad} personas · {mesa.descripcion || "Sin descripcion"}</p>
+                    </div>
+                    {mesaResumen && (
+                      <div className="table-partial">
+                        <span>Consumo parcial</span>
+                        <strong>{money(mesaResumen.total)}</strong>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
