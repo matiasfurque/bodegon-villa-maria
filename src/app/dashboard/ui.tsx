@@ -73,6 +73,9 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingReport, setRefreshingReport] = useState(false);
   const [message, setMessage] = useState("");
+  const activeRef = useRef(active);
+  const selectedMesaIdRef = useRef(selectedMesaId);
+  const autoRefreshRunningRef = useRef(false);
   const isAdmin = user.role.nombre === "Administrador";
   const isCook = user.role.nombre === "Cocinero";
   const visibleTabs = isAdmin ? tabs : isCook ? cookTabs : employeeTabs;
@@ -274,6 +277,31 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     if (mesaId) setPedidos(await api(`/api/pedidos?mesaId=${mesaId}`));
   }
 
+  async function loadOperationalData() {
+    const [mesasData, allPedidosData] = await Promise.all([
+      api("/api/mesas"),
+      api("/api/pedidos")
+    ]);
+    setMesas(mesasData);
+    setAllPedidos(allPedidosData);
+
+    const currentMesaId = selectedMesaIdRef.current;
+    const nextMesaId = currentMesaId && mesasData.some((mesa: Mesa) => mesa.id === currentMesaId)
+      ? currentMesaId
+      : mesasData[0]?.id || null;
+
+    if (nextMesaId !== currentMesaId) {
+      selectedMesaIdRef.current = nextMesaId;
+      setSelectedMesaId(nextMesaId);
+    }
+
+    if (nextMesaId) {
+      setPedidos(await api(`/api/pedidos?mesaId=${nextMesaId}`));
+    } else {
+      setPedidos([]);
+    }
+  }
+
   async function refreshAll() {
     try {
       setRefreshing(true);
@@ -288,6 +316,33 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
 
   useEffect(() => {
     loadAll().catch((error) => setMessage(error.message));
+  }, []);
+
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
+  useEffect(() => {
+    selectedMesaIdRef.current = selectedMesaId;
+  }, [selectedMesaId]);
+
+  useEffect(() => {
+    const interval = window.setInterval(async () => {
+      if (!["Inicio", "Operaciones", "Cocina"].includes(activeRef.current)) return;
+      if (document.visibilityState !== "visible") return;
+      if (autoRefreshRunningRef.current) return;
+
+      try {
+        autoRefreshRunningRef.current = true;
+        await loadOperationalData();
+      } catch {
+        // El boton Actualizar muestra errores visibles; el refresco automatico evita interrumpir el trabajo.
+      } finally {
+        autoRefreshRunningRef.current = false;
+      }
+    }, 5000);
+
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -308,6 +363,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }
 
   async function selectMesa(id: number) {
+    selectedMesaIdRef.current = id;
     setSelectedMesaId(id);
     setPedidos(await api(`/api/pedidos?mesaId=${id}`));
   }
@@ -427,6 +483,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           <button className="btn" onClick={refreshAll} disabled={refreshing}>
             <RefreshCcw className={refreshing ? "spin-icon" : ""} size={17} /> Actualizar
           </button>
+          <span className="sync-hint">Sincroniza cada 5s</span>
           <button className="btn danger" onClick={logout}>
             <LogOut size={17} /> Salir
           </button>
