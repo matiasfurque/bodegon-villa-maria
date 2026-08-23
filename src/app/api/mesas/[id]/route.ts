@@ -7,8 +7,23 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (auth.error) return auth.error;
   const { id } = await params;
   const data = await request.json();
+  const mesaId = Number(id);
+
+  if (data.estado === "Libre") {
+    const activePedidos = await prisma.pedido.count({
+      where: {
+        mesaId,
+        estado: "Activo"
+      }
+    });
+
+    if (activePedidos > 0) {
+      return json({ error: "No se puede liberar una mesa con pedidos activos. Cerrá la cuenta para dejarla libre." }, 400);
+    }
+  }
+
   const mesa = await prisma.mesa.update({
-    where: { id: Number(id) },
+    where: { id: mesaId },
     data: {
       numero: data.numero === undefined ? undefined : Number(data.numero),
       capacidad: data.capacidad === undefined ? undefined : Number(data.capacidad),

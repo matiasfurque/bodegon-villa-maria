@@ -655,9 +655,20 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
               <>
                 <p className={`status ${selectedMesa.estado}`}>{selectedMesa.estado}</p>
                 <div className="actions">
-                  <button className="btn" onClick={() => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify({ estado: "Ocupada" }) }), "Mesa ocupada")}>
-                    Ocupar
-                  </button>
+                  {selectedMesa.estado === "Ocupada" ? (
+                    <button
+                      className="btn"
+                      disabled={pedidosEnCurso.length > 0}
+                      title={pedidosEnCurso.length > 0 ? "Para liberar una mesa con pedidos activos, cerrá la cuenta." : undefined}
+                      onClick={() => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify({ estado: "Libre" }) }), "Mesa liberada")}
+                    >
+                      Liberar
+                    </button>
+                  ) : (
+                    <button className="btn" onClick={() => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify({ estado: "Ocupada" }) }), "Mesa ocupada")}>
+                      Ocupar
+                    </button>
+                  )}
                   <button className="btn primary" onClick={openCloseAccountDialog}>
                     <Receipt size={17} /> Cerrar cuenta
                   </button>
