@@ -19,7 +19,7 @@ async function main() {
   const cocineroRole = await prisma.role.upsert({
     where: { nombre: "Cocinero" },
     update: {},
-    create: { nombre: "Cocinero", descripcion: "Gestiona comandas de cocina" }
+    create: { nombre: "Cocinero", descripcion: "Gestiona pedidos de cocina" }
   });
 
   await prisma.user.upsert({

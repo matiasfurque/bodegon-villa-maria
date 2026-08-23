@@ -358,7 +358,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   async function updateKitchenStatus(pedidoId: number, estadoCocina: string) {
     await run(
       () => api(`/api/pedidos/${pedidoId}`, { method: "PATCH", body: JSON.stringify({ estadoCocina }) }),
-      "Comanda actualizada"
+      "Pedido actualizado"
     );
   }
 
@@ -634,9 +634,9 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           <div className="section-head">
             <div>
               <h2><ChefHat size={24} /> Cocina</h2>
-              <p className="muted">Comandas activas organizadas por mesa y estado de preparacion.</p>
+              <p className="muted">Pedidos activos organizados por mesa y estado de preparacion.</p>
             </div>
-            <div className="preset-filter" aria-label="Filtro de comandas">
+            <div className="preset-filter" aria-label="Filtro de pedidos">
               <button className={kitchenStatusFilter === "Activas" ? "active" : ""} type="button" onClick={() => setKitchenStatusFilter("Activas")}>Activas</button>
               {cocinaEstados.map((estado) => (
                 <button className={kitchenStatusFilter === estado ? "active" : ""} key={estado} type="button" onClick={() => setKitchenStatusFilter(estado)}>
@@ -647,7 +647,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           </div>
 
           {kitchenOrders.length === 0 ? (
-            <p className="muted detail-empty">No hay comandas para este filtro.</p>
+            <p className="muted detail-empty">No hay pedidos para este filtro.</p>
           ) : (
             <div className="kitchen-grid">
               {kitchenOrders.map((pedido) => {
@@ -1406,12 +1406,12 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
         <strong>{selectedProduct ? money(Number(selectedProduct.precio) * safeCantidad) : money(0)}</strong>
       </div>
       <button className="btn wide" type="button" disabled={!selectedProduct || productos.length === 0} onClick={addDraftItem}>
-        <Plus size={17} /> Agregar a comanda
+        <Plus size={17} /> Agregar al pedido
       </button>
 
       <div className="draft-order wide">
         <div className="draft-order-head">
-          <strong>Comanda a enviar</strong>
+          <strong>Pedido a enviar</strong>
           <span>{draftItems.length} producto{draftItems.length === 1 ? "" : "s"}</span>
         </div>
         {draftItems.length === 0 ? (
@@ -1435,11 +1435,11 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
           </div>
         )}
         <div className="draft-order-total">
-          <span>Total comanda</span>
+          <span>Total pedido</span>
           <strong>{money(draftTotal)}</strong>
         </div>
       </div>
-      <button className="btn primary wide" disabled={draftItems.length === 0}><Plus size={17} /> Enviar comanda</button>
+      <button className="btn primary wide" disabled={draftItems.length === 0}><Plus size={17} /> Enviar pedido</button>
     </form>
   );
 }
