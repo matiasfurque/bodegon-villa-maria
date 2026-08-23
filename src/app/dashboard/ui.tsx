@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, ChevronDown, Edit3, KeyRound, LogOut, Minus, Plus, Receipt, RefreshCcw, Save, Search, Trash2 } from "lucide-react";
+import { BarChart3, ChevronDown, Edit3, KeyRound, LogOut, Minus, Plus, Receipt, RefreshCcw, Save, Search, Table2, Trash2 } from "lucide-react";
 import { money } from "@/lib/money";
 
 type Role = { id: number; nombre: string };
@@ -20,7 +20,7 @@ type CuentaDetalleItem = { id: number; pedidoId: number; producto: string; canti
 type Report = { from: string; to: string; totalDia: number; totalPeriodo: number; cuentasHoy: number; cuentasPeriodo: number; mesasOcupadas: number; mesasAtendidasHoy: number; mesasAtendidasPeriodo: number; pedidosAnulados: number; cobrosPorMetodo: Array<{ metodo: string; cantidad: number; total: number }>; productosMasVendidos: Array<{ producto: string; cantidad: number; total: number }> };
 type ConfirmAction = { title: string; message: string; confirmLabel: string; onConfirm: () => Promise<void> };
 
-const tabs = ["Operaciones", "Productos", "Usuarios", "Reportes", "Historial"];
+const tabs = ["Inicio", "Operaciones", "Productos", "Usuarios", "Reportes", "Historial"];
 const employeeTabs = ["Operaciones", "Productos"];
 
 async function api(path: string, options?: RequestInit) {
@@ -35,13 +35,14 @@ async function api(path: string, options?: RequestInit) {
 
 export default function DashboardClient({ user }: { user: AuthUser }) {
   const router = useRouter();
-  const [active, setActive] = useState("Operaciones");
+  const [active, setActive] = useState(user.role.nombre === "Administrador" ? "Inicio" : "Operaciones");
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [allPedidos, setAllPedidos] = useState<Pedido[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
   const [selectedMesaId, setSelectedMesaId] = useState<number | null>(null);
@@ -64,6 +65,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const [reportTo, setReportTo] = useState("");
   const [showCloseAccount, setShowCloseAccount] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshingReport, setRefreshingReport] = useState(false);
   const [message, setMessage] = useState("");
   const isAdmin = user.role.nombre === "Administrador";
 
@@ -144,6 +147,43 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       return matchesText && matchesRole && matchesStatus;
     });
   }, [userRoleFilter, userSearch, userStatusFilter, users]);
+  const activePedidosResumen = useMemo(() => {
+    const activePedidos = allPedidos.filter((pedido) => pedido.estado === "Activo");
+    const byMesa = new Map<number, { mesa: Mesa | null; pedidos: number; items: number; total: number }>();
+
+    for (const pedido of activePedidos) {
+      const current = byMesa.get(pedido.mesaId) || {
+        mesa: mesas.find((mesa) => mesa.id === pedido.mesaId) || null,
+        pedidos: 0,
+        items: 0,
+        total: 0
+      };
+      current.pedidos += 1;
+      for (const item of pedido.items.filter((pedidoItem) => !pedidoItem.anulado)) {
+        current.items += item.cantidad;
+        current.total += Number(item.subtotal);
+      }
+      byMesa.set(pedido.mesaId, current);
+    }
+
+    return Array.from(byMesa.values()).sort((a, b) => (a.mesa?.numero || 0) - (b.mesa?.numero || 0));
+  }, [allPedidos, mesas]);
+  const dashboardStats = useMemo(() => {
+    const mesasActivas = mesas.filter((mesa) => mesa.activa);
+    const mesasOcupadas = mesasActivas.filter((mesa) => mesa.estado === "Ocupada").length;
+    const consumoAbierto = activePedidosResumen.reduce((sum, mesa) => sum + mesa.total, 0);
+    const ultimaCuenta = cuentas[0] || null;
+    return {
+      mesasOcupadas,
+      mesasLibres: mesasActivas.filter((mesa) => mesa.estado === "Libre").length,
+      consumoAbierto,
+      cuentasAbiertas: activePedidosResumen.length,
+      ventasHoy: report?.totalPeriodo || 0,
+      cuentasHoy: report?.cuentasPeriodo || 0,
+      ticketPromedio: report?.cuentasPeriodo ? (report.totalPeriodo / report.cuentasPeriodo) : 0,
+      ultimaCuenta
+    };
+  }, [activePedidosResumen, cuentas, mesas, report]);
 
   async function loadCuentas() {
     const params = new URLSearchParams();
@@ -160,6 +200,18 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     setReport(await api(`/api/reports${params.toString() ? `?${params}` : ""}`));
   }
 
+  async function refreshReport(fromOverride = reportFrom, toOverride = reportTo) {
+    try {
+      setRefreshingReport(true);
+      setMessage("");
+      await loadReport(fromOverride, toOverride);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo actualizar el reporte");
+    } finally {
+      setRefreshingReport(false);
+    }
+  }
+
   async function applyReportPreset(preset: "today" | "week" | "month") {
     const today = new Date();
     const from = new Date(today);
@@ -169,7 +221,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     const toText = toDateInput(today);
     setReportFrom(fromText);
     setReportTo(toText);
-    await loadReport(fromText, toText);
+    await refreshReport(fromText, toText);
   }
 
   async function loadAll() {
@@ -182,19 +234,33 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     setCategorias(categoriasData);
     setProductos(productosData);
     if (isAdmin) {
-      const [rolesData, usersData, reportData] = await Promise.all([
+      const [rolesData, usersData, reportData, allPedidosData] = await Promise.all([
         api("/api/roles"),
         api("/api/users"),
-        api("/api/reports")
+        api("/api/reports"),
+        api("/api/pedidos")
       ]);
       setRoles(rolesData);
       setUsers(usersData);
       setReport(reportData);
+      setAllPedidos(allPedidosData);
       await loadCuentas();
     }
     const mesaId = selectedMesaId || mesasData[0]?.id;
     setSelectedMesaId(mesaId || null);
     if (mesaId) setPedidos(await api(`/api/pedidos?mesaId=${mesaId}`));
+  }
+
+  async function refreshAll() {
+    try {
+      setRefreshing(true);
+      setMessage("");
+      await loadAll();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo actualizar");
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   useEffect(() => {
@@ -326,8 +392,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           <button className="btn" onClick={() => setShowSecurity(true)}>
             <KeyRound size={17} /> Mi seguridad
           </button>
-          <button className="btn" onClick={() => loadAll()}>
-            <RefreshCcw size={17} /> Actualizar
+          <button className="btn" onClick={refreshAll} disabled={refreshing}>
+            <RefreshCcw className={refreshing ? "spin-icon" : ""} size={17} /> Actualizar
           </button>
           <button className="btn danger" onClick={logout}>
             <LogOut size={17} /> Salir
@@ -343,6 +409,109 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         ))}
       </div>
       {message && <p className={isErrorMessage(message) ? "error" : "notice"}>{message}</p>}
+
+      {active === "Inicio" && isAdmin && (
+        <section className="dashboard-home">
+          <div className="panel dashboard-hero">
+            <div>
+              <span className="auth-eyebrow">Resumen operativo</span>
+              <h2>Hoy en Villa Maria</h2>
+              <p className="muted">Estado general de ventas, mesas y actividad reciente del sistema.</p>
+            </div>
+            <div className="dashboard-hero-total">
+              <span>Vendido hoy</span>
+              <strong>{money(dashboardStats.ventasHoy)}</strong>
+            </div>
+          </div>
+
+          <div className="stats-grid dashboard-stats">
+            <Stat label="Mesas ocupadas" value={dashboardStats.mesasOcupadas} />
+            <Stat label="Mesas libres" value={dashboardStats.mesasLibres} />
+            <Stat label="Consumo abierto" value={money(dashboardStats.consumoAbierto)} />
+            <Stat label="Cuentas cerradas" value={dashboardStats.cuentasHoy} />
+            <Stat label="Ticket promedio" value={money(dashboardStats.ticketPromedio)} />
+          </div>
+
+          <div className="dashboard-grid">
+            <section className="panel">
+              <div className="section-head">
+                <div>
+                  <h2>Mesas en curso</h2>
+                  <p className="muted">Consumos abiertos que necesitan seguimiento.</p>
+                </div>
+                <button className="btn" onClick={() => setActive("Operaciones")}>
+                  <Table2 size={17} /> Ver operaciones
+                </button>
+              </div>
+              {activePedidosResumen.length === 0 ? (
+                <p className="muted detail-empty">No hay mesas con pedidos activos.</p>
+              ) : (
+                <div className="open-table-list">
+                  {activePedidosResumen.map((item) => (
+                    <button
+                      className="open-table-row"
+                      key={item.mesa?.id || item.total}
+                      type="button"
+                      onClick={() => {
+                        if (item.mesa?.id) selectMesa(item.mesa.id);
+                        setActive("Operaciones");
+                      }}
+                    >
+                      <span>
+                        <strong>{item.mesa ? `Mesa ${item.mesa.numero}` : "Mesa"}</strong>
+                        <small>{item.items} items · {item.pedidos} pedidos</small>
+                      </span>
+                      <strong>{money(item.total)}</strong>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="panel">
+              <div className="section-head">
+                <div>
+                  <h2>Actividad reciente</h2>
+                  <p className="muted">Ultimos cierres registrados.</p>
+                </div>
+                <button className="btn" onClick={() => setActive("Historial")}>
+                  <Receipt size={17} /> Ver historial
+                </button>
+              </div>
+              {cuentas.slice(0, 5).length === 0 ? (
+                <p className="muted detail-empty">Todavia no hay cuentas cerradas.</p>
+              ) : (
+                <div className="recent-list">
+                  {cuentas.slice(0, 5).map((cuenta) => (
+                    <button className="recent-row" key={cuenta.id} type="button" onClick={() => setSelectedCuenta(cuenta)}>
+                      <span>
+                        <strong>Mesa {cuenta.mesa.numero}</strong>
+                        <small>{new Date(cuenta.fechaCierre).toLocaleString("es-AR")} · {cuenta.metodoPago || "Efectivo"}</small>
+                      </span>
+                      <strong>{money(cuenta.total)}</strong>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <section className="panel">
+            <div className="section-head">
+              <div>
+                <h2>Accesos rapidos</h2>
+                <p className="muted">Entradas directas para las tareas mas frecuentes.</p>
+              </div>
+            </div>
+            <div className="quick-actions">
+              <button className="btn primary" onClick={() => setActive("Operaciones")}><Plus size={17} /> Cargar pedido</button>
+              <button className="btn" onClick={() => setActive("Productos")}><Edit3 size={17} /> Editar productos</button>
+              <button className="btn" onClick={() => setActive("Reportes")}><BarChart3 size={17} /> Ver reportes</button>
+              <button className="btn" onClick={() => setActive("Usuarios")}><KeyRound size={17} /> Gestionar usuarios</button>
+            </div>
+          </section>
+        </section>
+      )}
 
       {active === "Operaciones" && (
         <section className="workspace">
@@ -658,7 +827,9 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
             <div className="report-dates">
               <Field label="Desde" type="date" value={reportFrom} onChange={setReportFrom} />
               <Field label="Hasta" type="date" value={reportTo} onChange={setReportTo} />
-              <button className="btn primary" onClick={() => loadReport()}><RefreshCcw size={17} /> Actualizar</button>
+              <button className="btn primary" onClick={() => refreshReport()} disabled={refreshingReport}>
+                <RefreshCcw className={refreshingReport ? "spin-icon" : ""} size={17} /> Actualizar
+              </button>
             </div>
           </div>
           <div className="stats-grid">

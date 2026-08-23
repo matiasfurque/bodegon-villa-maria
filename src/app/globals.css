@@ -155,6 +155,16 @@ button:disabled {
   border-color: currentColor;
 }
 
+.spin-icon {
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .public-section {
   padding: 56px 0;
 }
@@ -725,6 +735,102 @@ button:disabled {
   font-size: 28px;
 }
 
+.dashboard-home {
+  display: grid;
+  gap: 16px;
+}
+
+.dashboard-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-hero h2 {
+  margin: 8px 0 4px;
+  font-size: 32px;
+}
+
+.dashboard-hero-total {
+  min-width: 230px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: white;
+  text-align: right;
+}
+
+.dashboard-hero-total span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dashboard-hero-total strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--accent-strong);
+  font-size: 34px;
+}
+
+.dashboard-stats {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.open-table-list,
+.recent-list {
+  display: grid;
+  gap: 8px;
+}
+
+.open-table-row,
+.recent-row {
+  width: 100%;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: white;
+  color: var(--ink);
+  text-align: left;
+}
+
+.open-table-row:hover,
+.recent-row:hover {
+  border-color: var(--accent);
+}
+
+.open-table-row span,
+.recent-row span {
+  display: grid;
+  gap: 4px;
+}
+
+.open-table-row small,
+.recent-row small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .report-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -971,6 +1077,7 @@ button:disabled {
   .workspace,
   .form-grid,
   .product-filters,
+  .dashboard-grid,
   .report-grid {
     grid-template-columns: 1fr;
   }
@@ -998,9 +1105,16 @@ button:disabled {
   }
 
   .section-head,
+  .dashboard-hero,
   .app-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .dashboard-hero-total {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
   }
 
   .payment-summary {
