@@ -22,7 +22,7 @@ type Report = { from: string; to: string; totalDia: number; totalPeriodo: number
 type ConfirmAction = { title: string; message: string; confirmLabel: string; onConfirm: () => Promise<void> };
 
 const tabs = ["Inicio", "Operaciones", "Cocina", "Productos", "Usuarios", "Reportes", "Historial"];
-const employeeTabs = ["Operaciones", "Productos"];
+const employeeTabs = ["Operaciones"];
 const cookTabs = ["Cocina"];
 const cocinaEstados = ["Pendiente", "En preparacion", "Listo", "Entregado"];
 
@@ -703,7 +703,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         </section>
       )}
 
-      {active === "Productos" && (
+      {active === "Productos" && isAdmin && (
         <section className="workspace">
           <div className="panel">
             <div className="section-head">
