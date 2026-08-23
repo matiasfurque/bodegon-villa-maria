@@ -88,6 +88,7 @@ model Pedido {
   usuarioId   Int
   fechaHora   DateTime  @default(now())
   estado      String    @default("Activo")
+  estadoCocina String   @default("Pendiente")
   observacion String?
   mesa        Mesa      @relation(fields: [mesaId], references: [id])
   usuario     User      @relation(fields: [usuarioId], references: [id])

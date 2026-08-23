@@ -11,6 +11,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!pedido || pedido.estado !== "Activo" || pedido.mesa.estado !== "Ocupada") {
     return json({ error: "El pedido no puede modificarse" }, 400);
   }
+  if (!["Pendiente", "En preparacion"].includes(pedido.estadoCocina)) {
+    return json({ error: "La comanda ya esta cerrada para cocina. Creá una nueva comanda." }, 400);
+  }
   const product = await prisma.producto.findFirst({ where: { id: Number(data.productoId), activo: true } });
   if (!product) return json({ error: "Producto inválido" }, 400);
   const cantidad = Number(data.cantidad || 1);

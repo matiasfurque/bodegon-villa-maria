@@ -16,6 +16,12 @@ async function main() {
     create: { nombre: "Empleado", descripcion: "Gestiona mesas, pedidos y cuentas" }
   });
 
+  const cocineroRole = await prisma.role.upsert({
+    where: { nombre: "Cocinero" },
+    update: {},
+    create: { nombre: "Cocinero", descripcion: "Gestiona comandas de cocina" }
+  });
+
   await prisma.user.upsert({
     where: { usuario: "admin" },
     update: {},
@@ -40,6 +46,19 @@ async function main() {
       passwordHash: hashPassword("empleado123"),
       estado: true,
       roleId: empleadoRole.id
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { usuario: "cocinero" },
+    update: {},
+    create: {
+      nombre: "Cocinero",
+      apellido: "Demo",
+      usuario: "cocinero",
+      passwordHash: hashPassword("cocinero123"),
+      estado: true,
+      roleId: cocineroRole.id
     }
   });
 

@@ -8,6 +8,8 @@ const includePedido = {
   items: { include: { producto: true } }
 };
 
+const cocinaEstados = ["Pendiente", "En preparacion", "Listo", "Entregado"];
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = requireSession(request);
   if (auth.error) return auth.error;
@@ -17,9 +19,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!pedido || pedido.estado !== "Activo" || pedido.mesa.estado === "Cerrada") {
     return json({ error: "Solo se pueden modificar pedidos activos" }, 400);
   }
+  if (data.estadoCocina && !cocinaEstados.includes(data.estadoCocina)) {
+    return json({ error: "Estado de cocina invalido" }, 400);
+  }
   const updated = await prisma.pedido.update({
     where: { id: Number(id) },
-    data: { estado: data.estado || pedido.estado, observacion: data.observacion ?? pedido.observacion },
+    data: {
+      estado: data.estado || pedido.estado,
+      estadoCocina: data.estadoCocina || pedido.estadoCocina,
+      observacion: data.observacion ?? pedido.observacion
+    },
     include: includePedido
   });
   return json(updated);

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, ChevronDown, Edit3, KeyRound, LogOut, Minus, Plus, Receipt, RefreshCcw, Save, Search, Table2, Trash2 } from "lucide-react";
+import { BarChart3, ChefHat, ChevronDown, Edit3, KeyRound, LogOut, Minus, Plus, Receipt, RefreshCcw, Save, Search, Table2, Trash2 } from "lucide-react";
 import { money } from "@/lib/money";
 
 type Role = { id: number; nombre: string };
@@ -13,15 +13,18 @@ type Mesa = { id: number; numero: number; descripcion?: string | null; capacidad
 type Categoria = { id: number; nombre: string; orden?: number | null; visible: boolean };
 type Producto = { id: number; nombre: string; descripcion?: string | null; precio: string; activo: boolean; visibleMenu: boolean; categoriaId: number; categoria: Categoria };
 type PedidoItem = { id: number; productoId: number; cantidad: number; precioUnitario: string; subtotal: string; observacion?: string | null; anulado: boolean; motivoAnulacion?: string | null; producto: Producto };
-type Pedido = { id: number; mesaId: number; estado: string; observacion?: string | null; fechaHora: string; items: PedidoItem[] };
+type Pedido = { id: number; mesaId: number; estado: string; estadoCocina: string; observacion?: string | null; fechaHora: string; mesa?: Mesa; usuario?: { nombre: string; apellido: string; usuario: string }; items: PedidoItem[] };
+type OrderDraftItem = { draftId: string; productoId: number; nombre: string; cantidad: number; precio: number; observacion: string };
 type PaymentMethod = "Efectivo" | "Debito" | "Credito" | "Transferencia";
 type Cuenta = { id: number; fechaCierre: string; total: string; metodoPago: PaymentMethod; montoRecibido: string; vuelto: string; detalleJson: string; mesa: Mesa; usuarioCierre: { nombre: string; apellido: string; usuario: string } };
 type CuentaDetalleItem = { id: number; pedidoId: number; producto: string; cantidad: number; precioUnitario: number; subtotal: number; observacion?: string | null };
 type Report = { from: string; to: string; totalDia: number; totalPeriodo: number; cuentasHoy: number; cuentasPeriodo: number; mesasOcupadas: number; mesasAtendidasHoy: number; mesasAtendidasPeriodo: number; pedidosAnulados: number; cobrosPorMetodo: Array<{ metodo: string; cantidad: number; total: number }>; productosMasVendidos: Array<{ producto: string; cantidad: number; total: number }> };
 type ConfirmAction = { title: string; message: string; confirmLabel: string; onConfirm: () => Promise<void> };
 
-const tabs = ["Inicio", "Operaciones", "Productos", "Usuarios", "Reportes", "Historial"];
+const tabs = ["Inicio", "Operaciones", "Cocina", "Productos", "Usuarios", "Reportes", "Historial"];
 const employeeTabs = ["Operaciones", "Productos"];
+const cookTabs = ["Cocina"];
+const cocinaEstados = ["Pendiente", "En preparacion", "Listo", "Entregado"];
 
 async function api(path: string, options?: RequestInit) {
   const response = await fetch(path, {
@@ -35,7 +38,7 @@ async function api(path: string, options?: RequestInit) {
 
 export default function DashboardClient({ user }: { user: AuthUser }) {
   const router = useRouter();
-  const [active, setActive] = useState(user.role.nombre === "Administrador" ? "Inicio" : "Operaciones");
+  const [active, setActive] = useState(user.role.nombre === "Administrador" ? "Inicio" : user.role.nombre === "Cocinero" ? "Cocina" : "Operaciones");
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -58,6 +61,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("todos");
   const [userStatusFilter, setUserStatusFilter] = useState("todos");
+  const [kitchenStatusFilter, setKitchenStatusFilter] = useState("Activas");
   const [historyMesaId, setHistoryMesaId] = useState("");
   const [historyFrom, setHistoryFrom] = useState("");
   const [historyTo, setHistoryTo] = useState("");
@@ -69,6 +73,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const [refreshingReport, setRefreshingReport] = useState(false);
   const [message, setMessage] = useState("");
   const isAdmin = user.role.nombre === "Administrador";
+  const isCook = user.role.nombre === "Cocinero";
+  const visibleTabs = isAdmin ? tabs : isCook ? cookTabs : employeeTabs;
 
   const selectedMesa = mesas.find((mesa) => mesa.id === selectedMesaId) || mesas[0] || null;
   const nextMesaNumber = useMemo(
@@ -149,16 +155,18 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }, [userRoleFilter, userSearch, userStatusFilter, users]);
   const activePedidosResumen = useMemo(() => {
     const activePedidos = allPedidos.filter((pedido) => pedido.estado === "Activo");
-    const byMesa = new Map<number, { mesa: Mesa | null; pedidos: number; items: number; total: number }>();
+    const byMesa = new Map<number, { mesa: Mesa | null; pedidos: number; items: number; total: number; listos: number }>();
 
     for (const pedido of activePedidos) {
       const current = byMesa.get(pedido.mesaId) || {
         mesa: mesas.find((mesa) => mesa.id === pedido.mesaId) || null,
         pedidos: 0,
         items: 0,
-        total: 0
+        total: 0,
+        listos: 0
       };
       current.pedidos += 1;
+      if (pedido.estadoCocina === "Listo") current.listos += 1;
       for (const item of pedido.items.filter((pedidoItem) => !pedidoItem.anulado)) {
         current.items += item.cantidad;
         current.total += Number(item.subtotal);
@@ -172,6 +180,16 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     () => new Map(activePedidosResumen.map((item) => [item.mesa?.id || 0, item])),
     [activePedidosResumen]
   );
+  const kitchenOrders = useMemo(() => {
+    const activeOrders = allPedidos
+      .filter((pedido) => pedido.estado === "Activo")
+      .filter((pedido) => pedido.items.some((item) => !item.anulado));
+    const visibleOrders = kitchenStatusFilter === "Activas"
+      ? activeOrders.filter((pedido) => pedido.estadoCocina !== "Entregado")
+      : activeOrders.filter((pedido) => pedido.estadoCocina === kitchenStatusFilter);
+
+    return visibleOrders.sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime());
+  }, [allPedidos, kitchenStatusFilter]);
   const dashboardStats = useMemo(() => {
     const mesasActivas = mesas.filter((mesa) => mesa.activa);
     const mesasOcupadas = mesasActivas.filter((mesa) => mesa.estado === "Ocupada").length;
@@ -272,10 +290,10 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin && !employeeTabs.includes(active)) {
-      setActive("Operaciones");
+    if (!visibleTabs.includes(active)) {
+      setActive(visibleTabs[0]);
     }
-  }, [active, isAdmin]);
+  }, [active, visibleTabs]);
 
   async function run(action: () => Promise<unknown>, ok = "Operacion realizada") {
     try {
@@ -295,9 +313,9 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
 
   async function addProductToMesa(body: Record<string, unknown>) {
     if (!selectedMesa) throw new Error("Selecciona una mesa");
-    const item = Array.isArray(body.items) ? body.items[0] : null;
-    if (!item || !(item as { productoId?: unknown }).productoId) {
-      throw new Error("Selecciona un producto");
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (items.length === 0 || items.some((item) => !(item as { productoId?: unknown }).productoId)) {
+      throw new Error("Selecciona al menos un producto");
     }
 
     if (selectedMesa.estado !== "Ocupada") {
@@ -307,12 +325,14 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       });
     }
 
-    const activePedido = pedidos.find((pedido) => pedido.estado === "Activo");
+    const activePedido = pedidos.find((pedido) => pedido.estado === "Activo" && ["Pendiente", "En preparacion"].includes(pedido.estadoCocina));
     if (activePedido) {
-      await api(`/api/pedidos/${activePedido.id}/items`, {
-        method: "POST",
-        body: JSON.stringify(item)
-      });
+      for (const item of items) {
+        await api(`/api/pedidos/${activePedido.id}/items`, {
+          method: "POST",
+          body: JSON.stringify(item)
+        });
+      }
       return;
     }
 
@@ -333,6 +353,13 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
 
   function confirmDanger(action: ConfirmAction) {
     setConfirmAction(action);
+  }
+
+  async function updateKitchenStatus(pedidoId: number, estadoCocina: string) {
+    await run(
+      () => api(`/api/pedidos/${pedidoId}`, { method: "PATCH", body: JSON.stringify({ estadoCocina }) }),
+      "Comanda actualizada"
+    );
   }
 
   async function runConfirmedAction() {
@@ -406,7 +433,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       </header>
 
       <div className="tabs">
-        {(isAdmin ? tabs : employeeTabs).map((tab) => (
+        {visibleTabs.map((tab) => (
           <button className={`tab ${active === tab ? "active" : ""}`} key={tab} onClick={() => setActive(tab)}>
             {tab}
           </button>
@@ -509,6 +536,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
             </div>
             <div className="quick-actions">
               <button className="btn primary" onClick={() => setActive("Operaciones")}><Plus size={17} /> Cargar pedido</button>
+              <button className="btn" onClick={() => setActive("Cocina")}><ChefHat size={17} /> Ver cocina</button>
               <button className="btn" onClick={() => setActive("Productos")}><Edit3 size={17} /> Editar productos</button>
               <button className="btn" onClick={() => setActive("Reportes")}><BarChart3 size={17} /> Ver reportes</button>
               <button className="btn" onClick={() => setActive("Usuarios")}><KeyRound size={17} /> Gestionar usuarios</button>
@@ -546,6 +574,12 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                       <p className={`status ${mesa.estado}`}>{mesa.estado}</p>
                       <p className="muted">{mesa.capacidad} personas · {mesa.descripcion || "Sin descripcion"}</p>
                     </div>
+                    {mesaResumen?.listos ? (
+                      <div className="table-ready-alert">
+                        <ChefHat size={17} />
+                        <strong>{mesaResumen.listos} pedido{mesaResumen.listos > 1 ? "s" : ""} listo{mesaResumen.listos > 1 ? "s" : ""} para retirar</strong>
+                      </div>
+                    ) : null}
                     {mesaResumen && (
                       <div className="table-partial">
                         <span>Consumo parcial</span>
@@ -586,12 +620,86 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                   <OrderForm productos={productos.filter((p) => p.activo)} onSubmit={(body) => run(() => addProductToMesa(body), "Producto agregado al consumo")} />
                 </CollapsibleSection>
                 <h3>Consumo actual: {money(consumoTotal)}</h3>
-                  <PedidoList pedidos={pedidosEnCurso} confirmDanger={confirmDanger} />
+                  <PedidoList pedidos={pedidosEnCurso} confirmDanger={confirmDanger} onKitchenStatusChange={updateKitchenStatus} />
               </>
             ) : (
               <p className="muted">Crea una mesa para empezar.</p>
             )}
           </div>
+        </section>
+      )}
+
+      {active === "Cocina" && (
+        <section className="panel kitchen-board">
+          <div className="section-head">
+            <div>
+              <h2><ChefHat size={24} /> Cocina</h2>
+              <p className="muted">Comandas activas organizadas por mesa y estado de preparacion.</p>
+            </div>
+            <div className="preset-filter" aria-label="Filtro de comandas">
+              <button className={kitchenStatusFilter === "Activas" ? "active" : ""} type="button" onClick={() => setKitchenStatusFilter("Activas")}>Activas</button>
+              {cocinaEstados.map((estado) => (
+                <button className={kitchenStatusFilter === estado ? "active" : ""} key={estado} type="button" onClick={() => setKitchenStatusFilter(estado)}>
+                  {estado}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {kitchenOrders.length === 0 ? (
+            <p className="muted detail-empty">No hay comandas para este filtro.</p>
+          ) : (
+            <div className="kitchen-grid">
+              {kitchenOrders.map((pedido) => {
+                const activeItems = pedido.items.filter((item) => !item.anulado);
+                const totalItems = activeItems.reduce((sum, item) => sum + item.cantidad, 0);
+                const currentIndex = cocinaEstados.indexOf(pedido.estadoCocina);
+                const nextStatus = cocinaEstados[Math.min(currentIndex + 1, cocinaEstados.length - 1)];
+
+                return (
+                  <article className="kitchen-ticket" key={pedido.id}>
+                    <div className="kitchen-ticket-head">
+                      <div>
+                        <span className="auth-eyebrow">Pedido #{pedido.id}</span>
+                        <h3>{pedido.mesa ? `Mesa ${pedido.mesa.numero}` : `Mesa ${pedido.mesaId}`}</h3>
+                        <p className="muted">{new Date(pedido.fechaHora).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} · {totalItems} items</p>
+                      </div>
+                      <span className={`status kitchen-${statusSlug(pedido.estadoCocina)}`}>{pedido.estadoCocina}</span>
+                    </div>
+
+                    <div className="kitchen-items">
+                      {activeItems.map((item) => (
+                        <div className="kitchen-item" key={item.id}>
+                          <strong>{item.cantidad} x {item.producto.nombre}</strong>
+                          {item.observacion && <small>{item.observacion}</small>}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="kitchen-actions">
+                      {cocinaEstados.map((estado) => (
+                        <button
+                          className={`btn ${pedido.estadoCocina === estado ? "primary" : ""}`}
+                          disabled={pedido.estadoCocina === estado}
+                          key={estado}
+                          type="button"
+                          onClick={() => updateKitchenStatus(pedido.id, estado)}
+                        >
+                          {estado}
+                        </button>
+                      ))}
+                    </div>
+
+                    {pedido.estadoCocina !== "Entregado" && nextStatus !== pedido.estadoCocina && (
+                      <button className="btn primary kitchen-next" type="button" onClick={() => updateKitchenStatus(pedido.id, nextStatus)}>
+                        Pasar a {nextStatus}
+                      </button>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
@@ -1169,12 +1277,13 @@ function UserForm({ roles, user, onCancel, onSubmit }: { roles: Role[]; user: Us
   );
 }
 
-function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (body: Record<string, unknown>) => void }) {
+function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (body: Record<string, unknown>) => Promise<void> | void }) {
   const [productoId, setProductoId] = useState(productos[0]?.id || 0);
   const [cantidad, setCantidad] = useState(1);
   const [categoriaId, setCategoriaId] = useState("todas");
   const [query, setQuery] = useState("");
   const [observacion, setObservacion] = useState("");
+  const [draftItems, setDraftItems] = useState<OrderDraftItem[]>([]);
   const categorias = useMemo(() => {
     const map = new Map<number, Categoria>();
     productos.forEach((producto) => map.set(producto.categoria.id, producto.categoria));
@@ -1190,6 +1299,7 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
   }, [categoriaId, productos, query]);
   const selectedProduct = productosFiltrados.find((producto) => producto.id === productoId) || productosFiltrados[0] || productos.find((producto) => producto.id === productoId) || productos[0];
   const safeCantidad = Math.max(1, Number(cantidad) || 1);
+  const draftTotal = draftItems.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
 
   useEffect(() => {
     if (!selectedProduct && productos[0]) {
@@ -1201,10 +1311,41 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
     }
   }, [productoId, productos, selectedProduct]);
 
-  function submitOrder(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function addDraftItem() {
     if (!selectedProduct) return;
-    onSubmit({ items: [{ productoId: selectedProduct.id, cantidad: safeCantidad, observacion }] });
+    setDraftItems((current) => [
+      ...current,
+      {
+        draftId: `${selectedProduct.id}-${Date.now()}-${current.length}`,
+        productoId: selectedProduct.id,
+        nombre: selectedProduct.nombre,
+        cantidad: safeCantidad,
+        precio: Number(selectedProduct.precio),
+        observacion
+      }
+    ]);
+    setCantidad(1);
+    setObservacion("");
+  }
+
+  function removeDraftItem(draftId: string) {
+    setDraftItems((current) => current.filter((item) => item.draftId !== draftId));
+  }
+
+  async function submitOrder(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (draftItems.length === 0) {
+      addDraftItem();
+      return;
+    }
+    await onSubmit({
+      items: draftItems.map((item) => ({
+        productoId: item.productoId,
+        cantidad: item.cantidad,
+        observacion: item.observacion
+      }))
+    });
+    setDraftItems([]);
     setCantidad(1);
     setObservacion("");
   }
@@ -1264,7 +1405,41 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
         <span>{selectedProduct ? `${safeCantidad} x ${selectedProduct.nombre}` : "Sin producto seleccionado"}</span>
         <strong>{selectedProduct ? money(Number(selectedProduct.precio) * safeCantidad) : money(0)}</strong>
       </div>
-      <button className="btn primary wide" disabled={!selectedProduct || productos.length === 0}><Plus size={17} /> Agregar al consumo</button>
+      <button className="btn wide" type="button" disabled={!selectedProduct || productos.length === 0} onClick={addDraftItem}>
+        <Plus size={17} /> Agregar a comanda
+      </button>
+
+      <div className="draft-order wide">
+        <div className="draft-order-head">
+          <strong>Comanda a enviar</strong>
+          <span>{draftItems.length} producto{draftItems.length === 1 ? "" : "s"}</span>
+        </div>
+        {draftItems.length === 0 ? (
+          <p className="muted">Agrega uno o mas productos antes de enviar a cocina.</p>
+        ) : (
+          <div className="draft-order-list">
+            {draftItems.map((item) => (
+              <div className="draft-order-item" key={item.draftId}>
+                <span>
+                  <strong>{item.cantidad} x {item.nombre}</strong>
+                  {item.observacion && <small>{item.observacion}</small>}
+                </span>
+                <div className="actions">
+                  <strong>{money(item.precio * item.cantidad)}</strong>
+                  <button className="btn danger" type="button" onClick={() => removeDraftItem(item.draftId)}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="draft-order-total">
+          <span>Total comanda</span>
+          <strong>{money(draftTotal)}</strong>
+        </div>
+      </div>
+      <button className="btn primary wide" disabled={draftItems.length === 0}><Plus size={17} /> Enviar comanda</button>
     </form>
   );
 }
@@ -1503,13 +1678,38 @@ function ReportBarList({
   );
 }
 
-function PedidoList({ pedidos, confirmDanger }: { pedidos: Pedido[]; confirmDanger: (action: ConfirmAction) => void }) {
+function PedidoList({
+  pedidos,
+  confirmDanger,
+  onKitchenStatusChange
+}: {
+  pedidos: Pedido[];
+  confirmDanger: (action: ConfirmAction) => void;
+  onKitchenStatusChange: (pedidoId: number, estadoCocina: string) => Promise<void>;
+}) {
   return (
     <div>
       {pedidos.length === 0 && <p className="muted">No hay pedido en curso para esta mesa.</p>}
       {pedidos.map((pedido) => (
         <div className="card" key={pedido.id}>
-          <strong>Pedido #{pedido.id}</strong> <span className={`status ${pedido.estado}`}>{pedido.estado}</span>
+          <div className="pedido-head">
+            <div>
+              <strong>Pedido #{pedido.id}</strong>{" "}
+              <span className={`status ${pedido.estado}`}>{pedido.estado}</span>{" "}
+              <span className={`status kitchen-${statusSlug(pedido.estadoCocina)}`}>{pedido.estadoCocina}</span>
+            </div>
+            {pedido.estadoCocina === "Listo" && (
+              <button className="btn primary" type="button" onClick={() => onKitchenStatusChange(pedido.id, "Entregado")}>
+                <ChefHat size={16} /> Marcar entregado
+              </button>
+            )}
+          </div>
+          {pedido.estadoCocina === "Listo" && (
+            <div className="pedido-ready-alert">
+              <ChefHat size={18} />
+              <strong>Listo para retirar por cocina</strong>
+            </div>
+          )}
           {pedido.items.map((item) => (
             <div className="menu-item" key={item.id}>
               <div>
@@ -1553,6 +1753,10 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 function isErrorMessage(message: string) {
   const lower = message.toLowerCase();
   return lower.includes("error") || lower.includes("rechazada") || lower.includes("no se pudo") || lower.includes("ingresá");
+}
+
+function statusSlug(status: string) {
+  return status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-");
 }
 
 function parseCuentaDetalle(value: string): CuentaDetalleItem[] {
