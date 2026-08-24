@@ -76,6 +76,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const activeRef = useRef(active);
   const selectedMesaIdRef = useRef(selectedMesaId);
   const autoRefreshRunningRef = useRef(false);
+  const actionRunningRef = useRef(false);
+  const modalOpenRef = useRef(false);
   const isAdmin = user.role.nombre === "Administrador";
   const isCook = user.role.nombre === "Cocinero";
   const visibleTabs = isAdmin ? tabs : isCook ? cookTabs : employeeTabs;
@@ -304,6 +306,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
 
   async function refreshAll() {
     try {
+      actionRunningRef.current = true;
       setRefreshing(true);
       setMessage("");
       await loadAll();
@@ -311,6 +314,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       setMessage(error instanceof Error ? error.message : "No se pudo actualizar");
     } finally {
       setRefreshing(false);
+      actionRunningRef.current = false;
     }
   }
 
@@ -327,10 +331,15 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }, [selectedMesaId]);
 
   useEffect(() => {
+    modalOpenRef.current = Boolean(showCloseAccount || showSecurity || confirmAction);
+  }, [confirmAction, showCloseAccount, showSecurity]);
+
+  useEffect(() => {
     const interval = window.setInterval(async () => {
-      if (!["Inicio", "Operaciones", "Cocina"].includes(activeRef.current)) return;
+      if (!["Operaciones", "Cocina"].includes(activeRef.current)) return;
       if (document.visibilityState !== "visible") return;
       if (autoRefreshRunningRef.current) return;
+      if (actionRunningRef.current || modalOpenRef.current) return;
 
       try {
         autoRefreshRunningRef.current = true;
@@ -340,7 +349,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       } finally {
         autoRefreshRunningRef.current = false;
       }
-    }, 5000);
+    }, 15000);
 
     return () => window.clearInterval(interval);
   }, []);
@@ -353,12 +362,15 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
 
   async function run(action: () => Promise<unknown>, ok = "Operacion realizada") {
     try {
+      actionRunningRef.current = true;
       setMessage("");
       await action();
       setMessage(ok);
       await loadAll();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Error inesperado");
+    } finally {
+      actionRunningRef.current = false;
     }
   }
 
