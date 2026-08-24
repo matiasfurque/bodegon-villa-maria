@@ -26,7 +26,7 @@ export default async function HomePage() {
   return (
     <main className="public-shell">
       <nav className="topbar">
-        <div className="brand">Villa Maria</div>
+        <div className="brand">Bodegon Villa Maria</div>
         <div className="nav-actions">
           <a className="btn ghost" href="#menu">
             <Utensils size={18} /> Menu

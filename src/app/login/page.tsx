@@ -45,15 +45,6 @@ function LoginForm() {
     <main className="login-wrap">
       <section className="login-layout" aria-label="Acceso interno Villa Maria">
         <aside className="login-brand-panel">
-          <span className="auth-eyebrow">Sistema de gestion</span>
-          <div>
-            <p className="login-kicker">Villa Maria</p>
-            <h1>Acceso interno</h1>
-            <p>
-              Gestion de mesas, pedidos, productos y reportes con una experiencia pensada
-              para el equipo del salon.
-            </p>
-          </div>
           <div className="login-brand-footer">
             <span>Mataderos</span>
             <strong>Bodegon & cafeteria</strong>
