@@ -461,9 +461,9 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     setConfirmAction(action);
   }
 
-  async function updateKitchenStatus(pedidoId: number, estadoCocina: string) {
+  async function updateKitchenStatus(pedidoId: number, estadoCocina: string, estadoCocinaEsperado: string) {
     await run(
-      () => api(`/api/pedidos/${pedidoId}`, { method: "PATCH", body: JSON.stringify({ estadoCocina }) }),
+      () => api(`/api/pedidos/${pedidoId}`, { method: "PATCH", body: JSON.stringify({ estadoCocina, estadoCocinaEsperado }) }),
       "Pedido actualizado"
     );
   }
@@ -814,7 +814,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                           disabled={pedido.estadoCocina === estado.nombre}
                           key={estado.codigo}
                           type="button"
-                          onClick={() => updateKitchenStatus(pedido.id, estado.codigo)}
+                          onClick={() => updateKitchenStatus(pedido.id, estado.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina)}
                         >
                           {estado.nombre}
                         </button>
@@ -822,7 +822,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                     </div>
 
                     {nextStatus && pedido.estadoCocina !== nextStatus.nombre && nextStatus.visibleCocina && (
-                      <button className="btn primary kitchen-next" type="button" onClick={() => updateKitchenStatus(pedido.id, nextStatus.codigo)}>
+                      <button className="btn primary kitchen-next" type="button" onClick={() => updateKitchenStatus(pedido.id, nextStatus.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina)}>
                         Pasar a {nextStatus.nombre}
                       </button>
                     )}
@@ -1844,7 +1844,7 @@ function PedidoList({
 }: {
   pedidos: Pedido[];
   confirmDanger: (action: ConfirmAction) => void;
-  onKitchenStatusChange: (pedidoId: number, estadoCocina: string) => Promise<void>;
+  onKitchenStatusChange: (pedidoId: number, estadoCocina: string, estadoCocinaEsperado: string) => Promise<void>;
 }) {
   return (
     <div>
@@ -1858,7 +1858,7 @@ function PedidoList({
               <span className={`status kitchen-${statusSlug(pedido.estadoCocina)}`}>{pedido.estadoCocina}</span>
             </div>
             {pedido.estadoCocina === "Listo" && (
-              <button className="btn primary" type="button" onClick={() => onKitchenStatusChange(pedido.id, "Entregado")}>
+              <button className="btn primary" type="button" onClick={() => onKitchenStatusChange(pedido.id, "Entregado", pedido.estadoCocinaCodigo || pedido.estadoCocina)}>
                 <ChefHat size={16} /> Marcar entregado
               </button>
             )}
