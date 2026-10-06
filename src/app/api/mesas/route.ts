@@ -1,10 +1,10 @@
-import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { json, requirePermission, requireSession } from "@/lib/api";
-import { CODES, mesaEstadoBy, sectorMesaBy } from "@/lib/normalized";
-import { prisma } from "@/lib/prisma";
+import { CODES } from "@/lib/normalized";
+import { tableService } from "@/modules/tables/table.service";
+import type { TableWithRelations } from "@/modules/tables/table.types";
 
-function serializeMesa(mesa: { estado: { nombre: string; codigo: string; permitePedido: boolean; liberaMesa: boolean }; sector?: { nombre: string } | null } & Record<string, unknown>) {
+function serializeMesa(mesa: TableWithRelations) {
   return {
     ...mesa,
     estado: mesa.estado.nombre,
@@ -19,7 +19,7 @@ function serializeMesa(mesa: { estado: { nombre: string; codigo: string; permite
 export async function GET(request: NextRequest) {
   const auth = requireSession(request);
   if (auth.error) return auth.error;
-  const mesas = await prisma.mesa.findMany({ orderBy: { numero: "asc" }, include: { estado: true, sector: true } });
+  const mesas = await tableService.list();
   return json(mesas.map(serializeMesa));
 }
 
@@ -36,53 +36,7 @@ export async function POST(request: NextRequest) {
     return json({ error: "Ingresá una capacidad válida" }, 400);
   }
 
-  const existing = await prisma.mesa.findUnique({ where: { numero }, include: { estado: true, sector: true } });
-  if (existing) {
-    const sector = await sectorMesaBy(data.descripcion || existing.descripcion);
-    const result = await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT "id" FROM "Mesa" WHERE "id" = ${existing.id} FOR UPDATE`;
-      const current = await tx.mesa.findUniqueOrThrow({ where: { id: existing.id }, include: { estado: true } });
-      const estado = existing.estado.codigo === CODES.mesa.cerrada && current.estado.codigo === CODES.mesa.cerrada
-        ? await tx.mesaEstado.findUniqueOrThrow({ where: { codigo: CODES.mesa.libre } })
-        : current.estado;
-      if (estado.codigo === CODES.mesa.libre) {
-        const activePedidos = await tx.pedido.count({ where: { mesaId: current.id, estado: { esActivo: true } } });
-        if (activePedidos > 0) {
-          return { error: "No se puede liberar una mesa con pedidos activos. Cerrá la cuenta para dejarla libre." };
-        }
-      }
-      const mesa = await tx.mesa.update({
-        where: { id: current.id },
-        data: {
-          capacidad,
-          descripcion: data.descripcion || existing.descripcion,
-          sectorId: sector.id,
-          estadoId: estado.id
-        },
-        include: { estado: true, sector: true }
-      });
-      return { mesa };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
-
-    if ("error" in result) return json({ error: result.error }, 400);
-    return json(serializeMesa(result.mesa));
-  }
-
-  try {
-    const estado = await mesaEstadoBy(data.estado, CODES.mesa.libre);
-    const sector = await sectorMesaBy(data.descripcion);
-    const mesa = await prisma.mesa.create({
-      data: {
-        numero,
-        capacidad,
-        descripcion: data.descripcion || null,
-        sectorId: sector.id,
-        estadoId: estado.id
-      },
-      include: { estado: true, sector: true }
-    });
-    return json(serializeMesa(mesa), 201);
-  } catch {
-    return json({ error: "No se pudo crear la mesa. Revisá que el número no exista." }, 400);
-  }
+  const result = await tableService.create({ ...data, numero, capacidad });
+  if ("error" in result) return json({ error: result.error }, 400);
+  return json(serializeMesa(result.mesa), result.created ? 201 : 200);
 }
