@@ -45,6 +45,16 @@ DATABASE_URL="postgresql://usuario:password@host.neon.tech/neondb?sslmode=requir
 
 No se debe subir la URL real con usuario y password a GitHub. En el repositorio solo existe `.env.example` como plantilla segura.
 
+### DER de la base
+
+El DER actualizado esta en la carpeta `docs`:
+
+- `docs/DER.md`: version en Mermaid para copiar, revisar o editar.
+- `docs/DER-conectado.png`: imagen organizada para presentar.
+- `docs/DER-conectado.svg`: version editable de la imagen.
+
+El DER representa el estado actual normalizado de la base. Las tablas centrales son `User`, `Mesa`, `Producto`, `Pedido`, `PedidoItem`, `Cuenta` y `CuentaDetalle`.
+
 ### Base local opcional
 
 Para desarrollo local tambien se puede usar PostgreSQL instalado en la PC:
@@ -73,17 +83,35 @@ Prisma usa el archivo:
 prisma/schema.prisma
 ```
 
-Ese archivo define las tablas principales del sistema:
+Ese archivo define las tablas del sistema:
 
 - `Role`: roles de usuarios.
+- `Permiso`: permisos disponibles dentro del sistema.
+- `RolePermiso`: relacion entre roles y permisos.
 - `User`: usuarios del sistema.
+- `UsuarioEstado`: estado del usuario y si puede acceder.
 - `PasswordResetToken`: tokens temporales para recuperar contrasena.
 - `Mesa`: mesas del local.
+- `MesaEstado`: estado operativo de una mesa.
+- `SectorMesa`: sectores del salon.
+- `SectorMesaEstado`: estado de los sectores.
 - `CategoriaProducto`: categorias de la carta.
+- `CategoriaProductoEstado`: estado y visibilidad de categorias.
 - `Producto`: productos del menu.
+- `ProductoEstado`: estado comercial del producto.
+- `ProductoVisibilidad`: visibilidad del producto en el menu publico.
 - `Pedido`: pedido asociado a una mesa.
+- `PedidoEstado`: estado general del pedido.
+- `PedidoEstadoCocina`: avance del pedido en cocina.
 - `PedidoItem`: productos dentro de un pedido.
+- `PedidoItemEstado`: estado del item, por ejemplo activo o anulado.
+- `MotivoAnulacion`: motivos permitidos para anular items.
+- `MotivoAnulacionEstado`: estado de los motivos.
 - `Cuenta`: cuenta cerrada con total, metodo de pago y detalle.
+- `CuentaEstado`: estado de la cuenta.
+- `MetodoPago`: medios de pago.
+- `MetodoPagoEstado`: estado de los medios de pago.
+- `CuentaDetalle`: detalle historico de los productos cobrados.
 
 Cuando se cambia el modelo de datos, Prisma se usa para sincronizar la base y regenerar el cliente.
 
@@ -139,7 +167,55 @@ Repositorio:
 https://github.com/matiasfurque/bodegon-villa-maria.git
 ```
 
-## Roles del sistema
+## Normalizacion de la base
+
+La base fue normalizada para que la configuracion importante no dependa de textos sueltos o valores fijos dentro del codigo. En vez de guardar estados como palabras aisladas, el sistema usa tablas relacionadas por claves foraneas.
+
+Ejemplos:
+
+- `User` no guarda solo un texto de estado: apunta a `UsuarioEstado`.
+- `User` apunta a `Role`, y `Role` se conecta con `Permiso` mediante `RolePermiso`.
+- `Mesa` apunta a `MesaEstado` y opcionalmente a `SectorMesa`.
+- `Producto` apunta a `CategoriaProducto`, `ProductoEstado` y `ProductoVisibilidad`.
+- `Pedido` apunta a `PedidoEstado` y `PedidoEstadoCocina`.
+- `PedidoItem` apunta a `PedidoItemEstado` y, si fue anulado, a `MotivoAnulacion`.
+- `Cuenta` apunta a `MetodoPago` y `CuentaEstado`.
+- El detalle de una cuenta cerrada esta en `CuentaDetalle`, no en un JSON principal.
+
+### Columnas legacy
+
+Algunas columnas antiguas siguen existiendo fisicamente en Neon como respaldo de migracion, pero ya no son la fuente principal del sistema:
+
+- `User.estado`
+- `Mesa.estado`
+- `Mesa.activa`
+- `Producto.activo`
+- `Producto.visibleMenu`
+- `Pedido.estado`
+- `Pedido.estadoCocina`
+- `PedidoItem.anulado`
+- `PedidoItem.motivoAnulacion`
+- `Cuenta.metodoPago`
+- `Cuenta.estado`
+- `Cuenta.detalleJson`
+- `CategoriaProducto.visible`
+- `MetodoPago.activo`
+- `SectorMesa.activo`
+- `MotivoAnulacion.activo`
+
+La app actual usa las columnas nuevas normalizadas, por ejemplo `estadoId`, `visibilidadId`, `metodoPagoId` y relaciones equivalentes.
+
+## Roles y permisos
+
+Los roles existen en la base de datos y se relacionan con permisos. Esto evita depender de reglas escritas de forma fija para cada pantalla.
+
+Tablas relacionadas:
+
+- `Role`: nombre del rol.
+- `Permiso`: accion o acceso permitido.
+- `RolePermiso`: tabla intermedia que une roles con permisos.
+
+Roles usados actualmente:
 
 ### Administrador
 
@@ -250,11 +326,13 @@ El menu publico toma los productos visibles y activos desde la base de datos.
 Cuando se cierra una cuenta:
 
 1. El sistema busca los pedidos activos de la mesa.
-2. Suma items no anulados.
-3. Calcula el total.
-4. Guarda una `Cuenta` cerrada con detalle JSON.
-5. Marca los pedidos como finalizados.
-6. Libera la mesa.
+2. Verifica que no haya pedidos pendientes, en preparacion o listos sin entregar.
+3. Suma items no anulados.
+4. Calcula el total.
+5. Guarda una `Cuenta` cerrada.
+6. Guarda cada producto cobrado en `CuentaDetalle`.
+7. Marca los pedidos como finalizados.
+8. Libera la mesa.
 
 Metodos de pago:
 
@@ -362,9 +440,10 @@ Nota: antes de compilar conviene detener `pnpm dev`. En Windows, correr build mi
 
 El archivo `prisma/seed.ts` crea datos base:
 
-- rol Administrador
-- rol Empleado
-- rol Cocinero
+- roles Administrador, Empleado y Cocinero
+- permisos del sistema
+- relacion entre roles y permisos
+- estados normalizados de usuarios, mesas, pedidos, cocina, productos, cuentas, medios de pago, categorias, sectores e items
 - usuario `admin`
 - usuario `empleado`
 - usuario `cocinero`
@@ -397,6 +476,9 @@ Si una mejora no gusta, se puede revertir el commit correspondiente. Varias mejo
 - `prisma/seed.ts`: datos iniciales.
 - `.env.example`: plantilla de variables.
 - `src/app/icon.png`: favicon del sitio.
+- `docs/DER.md`: DER en Mermaid.
+- `docs/DER-conectado.png`: DER como imagen organizada.
+- `docs/DER-conectado.svg`: DER editable.
 
 ## Resumen simple de como fluye el sistema
 
@@ -410,4 +492,3 @@ Si una mejora no gusta, se puede revertir el commit correspondiente. Varias mejo
 8. Al final, se cierra cuenta.
 9. La cuenta cerrada alimenta historial y reportes.
 10. La mesa vuelve a quedar libre.
-

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin, sessionFromRequest } from "./auth";
+import { sessionFromRequest } from "./auth";
+import { prisma } from "./prisma";
 
 export function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status });
@@ -13,12 +14,33 @@ export function requireSession(request: NextRequest) {
   return { error: null, session };
 }
 
-export function requireAdmin(request: NextRequest) {
+export async function requirePermission(request: NextRequest, permission: string) {
+  return requireAnyPermission(request, [permission]);
+}
+
+export async function requireAnyPermission(request: NextRequest, permissions: string[]) {
   const auth = requireSession(request);
   if (auth.error) return auth;
-  if (!isAdmin(auth.session?.role)) {
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: auth.session!.userId,
+      estado: { permiteAcceso: true },
+      role: {
+        permisos: {
+          some: {
+            permiso: { codigo: { in: permissions } }
+          }
+        }
+      }
+    },
+    select: { id: true }
+  });
+
+  if (!user) {
     return { error: json({ error: "No autorizado" }, 403) as NextResponse, session: auth.session };
   }
+
   return auth;
 }
 

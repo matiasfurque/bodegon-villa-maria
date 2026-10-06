@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   const user = await prisma.user.findFirst({
     where: {
-      estado: true,
+      estado: { permiteAcceso: true },
       OR: [
         { usuario: { equals: identifier, mode: "insensitive" } },
         { email: { equals: identifier, mode: "insensitive" } }

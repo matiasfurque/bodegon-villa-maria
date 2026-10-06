@@ -1,0 +1,364 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="2500" viewBox="0 0 2400 2500">
+<defs><style>
+.bg{fill:#f8f2e8}.title{font:800 48px Arial;fill:#103f2a}.subtitle{font:22px Arial;fill:#655d52}.section{fill:#fffaf0;stroke:#decdb8;stroke-width:2}.section-title{font:800 28px Arial;fill:#103f2a;letter-spacing:.5px}.table{fill:#fff;stroke:#cbb9a3;stroke-width:2}.main{stroke:#0f5132;stroke-width:4}.head{fill:#0f5132}.headtext{font:800 22px Arial;fill:white}.field{font:18px Arial;fill:#241f1a}.fkrow{fill:#fff5dc;stroke:#d8ad43;stroke-width:1.4}.legend{font:19px Arial;fill:#103f2a;font-weight:700}.pill{fill:#e9f7ef;stroke:#9ccbb8}.relbox{fill:#fff;stroke:#d9c7b2;stroke-width:1.4}.reltext{font:18px Arial;fill:#3f3932}.legacytitle{font:800 24px Arial;fill:#103f2a}.legacy{font:18px Arial;fill:#50483f}.note{font:18px Arial;fill:#655d52}.line{stroke:#90a999;stroke-width:2;fill:none;marker-end:url(#arrow);opacity:.75}.dim{fill:#f3eadc;stroke:#d9c7b2}.dimtext{font:17px Arial;fill:#5a5047}
+</style><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#90a999"/></marker></defs>
+<rect class="bg" width="2400" height="2500"/>
+<text class="title" x="40" y="58">DER normalizado - Bodegon Villa Maria</text>
+<text class="subtitle" x="40" y="88">PostgreSQL en Neon. Relaciones indicadas en cada FK para evitar flechas cruzadas.</text>
+<rect class="section" x="40" y="90" width="720" height="650" rx="20"/>
+<text class="section-title" x="64" y="132">ACCESOS Y SEGURIDAD</text>
+<rect class="section" x="840" y="90" width="700" height="650" rx="20"/>
+<text class="section-title" x="864" y="132">MESAS</text>
+<rect class="section" x="1620" y="90" width="720" height="900" rx="20"/>
+<text class="section-title" x="1644" y="132">CARTA Y PRODUCTOS</text>
+<rect class="section" x="40" y="820" width="1220" height="900" rx="20"/>
+<text class="section-title" x="64" y="862">PEDIDOS Y COCINA</text>
+<rect class="section" x="1340" y="1060" width="1000" height="660" rx="20"/>
+<text class="section-title" x="1364" y="1102">CUENTAS Y COBROS</text>
+<rect class="section" x="40" y="1820" width="2300" height="560" rx="20"/>
+<text class="section-title" x="64" y="1862">COLUMNAS LEGACY / RESPALDO</text>
+<rect class="table" x="80" y="170" width="300" height="144" rx="12"/>
+<rect class="head" x="80" y="170" width="300" height="44" rx="12"/>
+<path d="M80,202 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="94" y="199">Role</text>
+<text class="field" x="98" y="242">id PK</text>
+<text class="field" x="98" y="272">nombre UK</text>
+<text class="field" x="98" y="302">descripcion</text>
+<rect class="table" x="80" y="390" width="300" height="174" rx="12"/>
+<rect class="head" x="80" y="390" width="300" height="44" rx="12"/>
+<path d="M80,422 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="94" y="419">Permiso</text>
+<text class="field" x="98" y="462">id PK</text>
+<text class="field" x="98" y="492">codigo UK</text>
+<text class="field" x="98" y="522">nombre</text>
+<text class="field" x="98" y="552">descripcion</text>
+<rect class="table" x="420" y="270" width="300" height="144" rx="12"/>
+<rect class="head" x="420" y="270" width="300" height="44" rx="12"/>
+<path d="M420,302 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="434" y="299">RolePermiso</text>
+<text class="field" x="438" y="342">id PK</text>
+<rect class="fkrow" x="430" y="351" width="280" height="26" rx="7"/>
+<text class="field" x="438" y="372">roleId FK -&gt; Role.id</text>
+<rect class="fkrow" x="430" y="381" width="280" height="26" rx="7"/>
+<text class="field" x="438" y="402">permisoId FK -&gt; Permiso.id</text>
+<rect class="table main" x="420" y="470" width="300" height="324" rx="12"/>
+<rect class="head" x="420" y="470" width="300" height="44" rx="12"/>
+<path d="M420,502 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="434" y="499">User</text>
+<text class="field" x="438" y="542">id PK</text>
+<text class="field" x="438" y="572">nombre</text>
+<text class="field" x="438" y="602">apellido</text>
+<text class="field" x="438" y="632">usuario UK</text>
+<text class="field" x="438" y="662">passwordHash</text>
+<rect class="fkrow" x="430" y="671" width="280" height="26" rx="7"/>
+<text class="field" x="438" y="692">estadoId FK -&gt; UsuarioEstado.id</text>
+<rect class="fkrow" x="430" y="701" width="280" height="26" rx="7"/>
+<text class="field" x="438" y="722">roleId FK -&gt; Role.id</text>
+<text class="field" x="438" y="752">email</text>
+<text class="field" x="438" y="782">telefono</text>
+<rect class="table" x="80" y="580" width="300" height="174" rx="12"/>
+<rect class="head" x="80" y="580" width="300" height="44" rx="12"/>
+<path d="M80,612 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="94" y="609">UsuarioEstado</text>
+<text class="field" x="98" y="652">id PK</text>
+<text class="field" x="98" y="682">codigo UK</text>
+<text class="field" x="98" y="712">nombre</text>
+<text class="field" x="98" y="742">permiteAcceso</text>
+<rect class="table" x="420" y="170" width="300" height="204" rx="12"/>
+<rect class="head" x="420" y="170" width="300" height="44" rx="12"/>
+<path d="M420,202 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="434" y="199">PasswordResetToken</text>
+<text class="field" x="438" y="242">id PK</text>
+<rect class="fkrow" x="430" y="251" width="280" height="26" rx="7"/>
+<text class="field" x="438" y="272">userId FK -&gt; User.id</text>
+<text class="field" x="438" y="302">tokenHash UK</text>
+<text class="field" x="438" y="332">expiresAt</text>
+<text class="field" x="438" y="362">usedAt</text>
+<rect class="table main" x="880" y="170" width="310" height="294" rx="12"/>
+<rect class="head" x="880" y="170" width="310" height="44" rx="12"/>
+<path d="M880,202 h310 v12 h-310z" fill="#0f5132"/>
+<text class="headtext" x="894" y="199">Mesa</text>
+<text class="field" x="898" y="242">id PK</text>
+<text class="field" x="898" y="272">numero UK</text>
+<text class="field" x="898" y="302">descripcion</text>
+<text class="field" x="898" y="332">capacidad</text>
+<rect class="fkrow" x="890" y="341" width="290" height="26" rx="7"/>
+<text class="field" x="898" y="362">estadoId FK -&gt; MesaEstado.id</text>
+<rect class="fkrow" x="890" y="371" width="290" height="26" rx="7"/>
+<text class="field" x="898" y="392">sectorId FK -&gt; SectorMesa.id</text>
+<rect class="fkrow" x="890" y="401" width="290" height="26" rx="7"/>
+<text class="field" x="898" y="422">abiertaPor FK -&gt; User.id</text>
+<text class="field" x="898" y="452">abiertaAt</text>
+<rect class="table" x="1220" y="170" width="280" height="204" rx="12"/>
+<rect class="head" x="1220" y="170" width="280" height="44" rx="12"/>
+<path d="M1220,202 h280 v12 h-280z" fill="#0f5132"/>
+<text class="headtext" x="1234" y="199">MesaEstado</text>
+<text class="field" x="1238" y="242">id PK</text>
+<text class="field" x="1238" y="272">codigo UK</text>
+<text class="field" x="1238" y="302">nombre</text>
+<text class="field" x="1238" y="332">permitePedido</text>
+<text class="field" x="1238" y="362">liberaMesa</text>
+<rect class="table" x="880" y="470" width="300" height="204" rx="12"/>
+<rect class="head" x="880" y="470" width="300" height="44" rx="12"/>
+<path d="M880,502 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="894" y="499">SectorMesa</text>
+<text class="field" x="898" y="542">id PK</text>
+<text class="field" x="898" y="572">nombre UK</text>
+<text class="field" x="898" y="602">descripcion</text>
+<text class="field" x="898" y="632">orden</text>
+<rect class="fkrow" x="890" y="641" width="280" height="26" rx="7"/>
+<text class="field" x="898" y="662">estadoId FK -&gt; SectorMesaEstado.id</text>
+<rect class="table" x="1220" y="470" width="300" height="174" rx="12"/>
+<rect class="head" x="1220" y="470" width="300" height="44" rx="12"/>
+<path d="M1220,502 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="1234" y="499">SectorMesaEstado</text>
+<text class="field" x="1238" y="542">id PK</text>
+<text class="field" x="1238" y="572">codigo UK</text>
+<text class="field" x="1238" y="602">nombre</text>
+<text class="field" x="1238" y="632">habilitado</text>
+<rect class="table" x="1660" y="170" width="310" height="174" rx="12"/>
+<rect class="head" x="1660" y="170" width="310" height="44" rx="12"/>
+<path d="M1660,202 h310 v12 h-310z" fill="#0f5132"/>
+<text class="headtext" x="1674" y="199">CategoriaProducto</text>
+<text class="field" x="1678" y="242">id PK</text>
+<text class="field" x="1678" y="272">nombre UK</text>
+<text class="field" x="1678" y="302">orden</text>
+<rect class="fkrow" x="1670" y="311" width="290" height="26" rx="7"/>
+<text class="field" x="1678" y="332">estadoId FK -&gt; CategoriaProductoEstado.id</text>
+<rect class="table" x="2000" y="170" width="300" height="204" rx="12"/>
+<rect class="head" x="2000" y="170" width="300" height="44" rx="12"/>
+<path d="M2000,202 h300 v12 h-300z" fill="#0f5132"/>
+<text class="headtext" x="2014" y="199">CategoriaProductoEstado</text>
+<text class="field" x="2018" y="242">id PK</text>
+<text class="field" x="2018" y="272">codigo UK</text>
+<text class="field" x="2018" y="302">nombre</text>
+<text class="field" x="2018" y="332">visibleEnMenu</text>
+<text class="field" x="2018" y="362">habilitado</text>
+<rect class="table main" x="1660" y="440" width="330" height="264" rx="12"/>
+<rect class="head" x="1660" y="440" width="330" height="44" rx="12"/>
+<path d="M1660,472 h330 v12 h-330z" fill="#0f5132"/>
+<text class="headtext" x="1674" y="469">Producto</text>
+<text class="field" x="1678" y="512">id PK</text>
+<text class="field" x="1678" y="542">nombre</text>
+<text class="field" x="1678" y="572">descripcion</text>
+<text class="field" x="1678" y="602">precio</text>
+<rect class="fkrow" x="1670" y="611" width="310" height="26" rx="7"/>
+<text class="field" x="1678" y="632">categoriaId FK -&gt; CategoriaProducto.id</text>
+<rect class="fkrow" x="1670" y="641" width="310" height="26" rx="7"/>
+<text class="field" x="1678" y="662">estadoId FK -&gt; ProductoEstado.id</text>
+<rect class="fkrow" x="1670" y="671" width="310" height="26" rx="7"/>
+<text class="field" x="1678" y="692">visibilidadId FK -&gt; ProductoVisibilidad.id</text>
+<rect class="table" x="2020" y="440" width="280" height="204" rx="12"/>
+<rect class="head" x="2020" y="440" width="280" height="44" rx="12"/>
+<path d="M2020,472 h280 v12 h-280z" fill="#0f5132"/>
+<text class="headtext" x="2034" y="469">ProductoEstado</text>
+<text class="field" x="2038" y="512">id PK</text>
+<text class="field" x="2038" y="542">codigo UK</text>
+<text class="field" x="2038" y="572">nombre</text>
+<text class="field" x="2038" y="602">permiteVenta</text>
+<text class="field" x="2038" y="632">esBajaLogica</text>
+<rect class="table" x="2020" y="690" width="280" height="174" rx="12"/>
+<rect class="head" x="2020" y="690" width="280" height="44" rx="12"/>
+<path d="M2020,722 h280 v12 h-280z" fill="#0f5132"/>
+<text class="headtext" x="2034" y="719">ProductoVisibilidad</text>
+<text class="field" x="2038" y="762">id PK</text>
+<text class="field" x="2038" y="792">codigo UK</text>
+<text class="field" x="2038" y="822">nombre</text>
+<text class="field" x="2038" y="852">visibleEnMenu</text>
+<rect class="table main" x="360" y="930" width="350" height="264" rx="12"/>
+<rect class="head" x="360" y="930" width="350" height="44" rx="12"/>
+<path d="M360,962 h350 v12 h-350z" fill="#0f5132"/>
+<text class="headtext" x="374" y="959">Pedido</text>
+<text class="field" x="378" y="1002">id PK</text>
+<rect class="fkrow" x="370" y="1011" width="330" height="26" rx="7"/>
+<text class="field" x="378" y="1032">mesaId FK -&gt; Mesa.id</text>
+<rect class="fkrow" x="370" y="1041" width="330" height="26" rx="7"/>
+<text class="field" x="378" y="1062">usuarioId FK -&gt; User.id</text>
+<text class="field" x="378" y="1092">fechaHora</text>
+<rect class="fkrow" x="370" y="1101" width="330" height="26" rx="7"/>
+<text class="field" x="378" y="1122">estadoId FK -&gt; PedidoEstado.id</text>
+<rect class="fkrow" x="370" y="1131" width="330" height="26" rx="7"/>
+<text class="field" x="378" y="1152">estadoCocinaId FK -&gt; PedidoEstadoCocina.id</text>
+<text class="field" x="378" y="1182">observacion</text>
+<rect class="table" x="80" y="930" width="250" height="174" rx="12"/>
+<rect class="head" x="80" y="930" width="250" height="44" rx="12"/>
+<path d="M80,962 h250 v12 h-250z" fill="#0f5132"/>
+<text class="headtext" x="94" y="959">PedidoEstado</text>
+<text class="field" x="98" y="1002">id PK</text>
+<text class="field" x="98" y="1032">codigo UK</text>
+<text class="field" x="98" y="1062">nombre</text>
+<text class="field" x="98" y="1092">esActivo</text>
+<rect class="table" x="740" y="930" width="330" height="234" rx="12"/>
+<rect class="head" x="740" y="930" width="330" height="44" rx="12"/>
+<path d="M740,962 h330 v12 h-330z" fill="#0f5132"/>
+<text class="headtext" x="754" y="959">PedidoEstadoCocina</text>
+<text class="field" x="758" y="1002">id PK</text>
+<text class="field" x="758" y="1032">codigo UK</text>
+<text class="field" x="758" y="1062">nombre</text>
+<text class="field" x="758" y="1092">permiteAgregarItems</text>
+<text class="field" x="758" y="1122">visibleCocina</text>
+<text class="field" x="758" y="1152">notificaMozo</text>
+<rect class="table main" x="360" y="1240" width="390" height="324" rx="12"/>
+<rect class="head" x="360" y="1240" width="390" height="44" rx="12"/>
+<path d="M360,1272 h390 v12 h-390z" fill="#0f5132"/>
+<text class="headtext" x="374" y="1269">PedidoItem</text>
+<text class="field" x="378" y="1312">id PK</text>
+<rect class="fkrow" x="370" y="1321" width="370" height="26" rx="7"/>
+<text class="field" x="378" y="1342">pedidoId FK -&gt; Pedido.id</text>
+<rect class="fkrow" x="370" y="1351" width="370" height="26" rx="7"/>
+<text class="field" x="378" y="1372">productoId FK -&gt; Producto.id</text>
+<text class="field" x="378" y="1402">cantidad</text>
+<text class="field" x="378" y="1432">precioUnitario</text>
+<text class="field" x="378" y="1462">subtotal</text>
+<text class="field" x="378" y="1492">observacion</text>
+<rect class="fkrow" x="370" y="1501" width="370" height="26" rx="7"/>
+<text class="field" x="378" y="1522">estadoId FK -&gt; PedidoItemEstado.id</text>
+<rect class="fkrow" x="370" y="1531" width="370" height="26" rx="7"/>
+<text class="field" x="378" y="1552">motivoAnulacionId FK -&gt; MotivoAnulacion.id</text>
+<rect class="table" x="80" y="1240" width="270" height="174" rx="12"/>
+<rect class="head" x="80" y="1240" width="270" height="44" rx="12"/>
+<path d="M80,1272 h270 v12 h-270z" fill="#0f5132"/>
+<text class="headtext" x="94" y="1269">PedidoItemEstado</text>
+<text class="field" x="98" y="1312">id PK</text>
+<text class="field" x="98" y="1342">codigo UK</text>
+<text class="field" x="98" y="1372">nombre</text>
+<text class="field" x="98" y="1402">esAnulado</text>
+<rect class="table" x="790" y="1240" width="320" height="204" rx="12"/>
+<rect class="head" x="790" y="1240" width="320" height="44" rx="12"/>
+<path d="M790,1272 h320 v12 h-320z" fill="#0f5132"/>
+<text class="headtext" x="804" y="1269">MotivoAnulacion</text>
+<text class="field" x="808" y="1312">id PK</text>
+<text class="field" x="808" y="1342">codigo UK</text>
+<text class="field" x="808" y="1372">nombre</text>
+<text class="field" x="808" y="1402">descripcion</text>
+<rect class="fkrow" x="800" y="1411" width="300" height="26" rx="7"/>
+<text class="field" x="808" y="1432">estadoId FK -&gt; MotivoAnulacionEstado.id</text>
+<rect class="table" x="790" y="1490" width="320" height="174" rx="12"/>
+<rect class="head" x="790" y="1490" width="320" height="44" rx="12"/>
+<path d="M790,1522 h320 v12 h-320z" fill="#0f5132"/>
+<text class="headtext" x="804" y="1519">MotivoAnulacionEstado</text>
+<text class="field" x="808" y="1562">id PK</text>
+<text class="field" x="808" y="1592">codigo UK</text>
+<text class="field" x="808" y="1622">nombre</text>
+<text class="field" x="808" y="1652">habilitado</text>
+<rect class="table main" x="1380" y="1150" width="370" height="324" rx="12"/>
+<rect class="head" x="1380" y="1150" width="370" height="44" rx="12"/>
+<path d="M1380,1182 h370 v12 h-370z" fill="#0f5132"/>
+<text class="headtext" x="1394" y="1179">Cuenta</text>
+<text class="field" x="1398" y="1222">id PK</text>
+<rect class="fkrow" x="1390" y="1231" width="350" height="26" rx="7"/>
+<text class="field" x="1398" y="1252">mesaId FK -&gt; Mesa.id</text>
+<rect class="fkrow" x="1390" y="1261" width="350" height="26" rx="7"/>
+<text class="field" x="1398" y="1282">usuarioCierreId FK -&gt; User.id</text>
+<text class="field" x="1398" y="1312">fechaCierre</text>
+<text class="field" x="1398" y="1342">total</text>
+<rect class="fkrow" x="1390" y="1351" width="350" height="26" rx="7"/>
+<text class="field" x="1398" y="1372">metodoPagoId FK -&gt; MetodoPago.id</text>
+<text class="field" x="1398" y="1402">montoRecibido</text>
+<text class="field" x="1398" y="1432">vuelto</text>
+<rect class="fkrow" x="1390" y="1441" width="350" height="26" rx="7"/>
+<text class="field" x="1398" y="1462">estadoId FK -&gt; CuentaEstado.id</text>
+<rect class="table" x="1780" y="1150" width="280" height="174" rx="12"/>
+<rect class="head" x="1780" y="1150" width="280" height="44" rx="12"/>
+<path d="M1780,1182 h280 v12 h-280z" fill="#0f5132"/>
+<text class="headtext" x="1794" y="1179">CuentaEstado</text>
+<text class="field" x="1798" y="1222">id PK</text>
+<text class="field" x="1798" y="1252">codigo UK</text>
+<text class="field" x="1798" y="1282">nombre</text>
+<text class="field" x="1798" y="1312">esCerrada</text>
+<rect class="table" x="1780" y="1380" width="320" height="204" rx="12"/>
+<rect class="head" x="1780" y="1380" width="320" height="44" rx="12"/>
+<path d="M1780,1412 h320 v12 h-320z" fill="#0f5132"/>
+<text class="headtext" x="1794" y="1409">MetodoPago</text>
+<text class="field" x="1798" y="1452">id PK</text>
+<text class="field" x="1798" y="1482">codigo UK</text>
+<text class="field" x="1798" y="1512">nombre</text>
+<text class="field" x="1798" y="1542">requiereMontoRecibido</text>
+<rect class="fkrow" x="1790" y="1551" width="300" height="26" rx="7"/>
+<text class="field" x="1798" y="1572">estadoId FK -&gt; MetodoPagoEstado.id</text>
+<rect class="table" x="2120" y="1380" width="260" height="174" rx="12"/>
+<rect class="head" x="2120" y="1380" width="260" height="44" rx="12"/>
+<path d="M2120,1412 h260 v12 h-260z" fill="#0f5132"/>
+<text class="headtext" x="2134" y="1409">MetodoPagoEstado</text>
+<text class="field" x="2138" y="1452">id PK</text>
+<text class="field" x="2138" y="1482">codigo UK</text>
+<text class="field" x="2138" y="1512">nombre</text>
+<text class="field" x="2138" y="1542">habilitado</text>
+<rect class="table main" x="1380" y="1440" width="370" height="324" rx="12"/>
+<rect class="head" x="1380" y="1440" width="370" height="44" rx="12"/>
+<path d="M1380,1472 h370 v12 h-370z" fill="#0f5132"/>
+<text class="headtext" x="1394" y="1469">CuentaDetalle</text>
+<text class="field" x="1398" y="1512">id PK</text>
+<rect class="fkrow" x="1390" y="1521" width="350" height="26" rx="7"/>
+<text class="field" x="1398" y="1542">cuentaId FK -&gt; Cuenta.id</text>
+<text class="field" x="1398" y="1572">pedidoId</text>
+<rect class="fkrow" x="1390" y="1581" width="350" height="26" rx="7"/>
+<text class="field" x="1398" y="1602">productoId FK -&gt; Producto.id</text>
+<text class="field" x="1398" y="1632">productoNombre</text>
+<text class="field" x="1398" y="1662">cantidad</text>
+<text class="field" x="1398" y="1692">precioUnitario</text>
+<text class="field" x="1398" y="1722">subtotal</text>
+<text class="field" x="1398" y="1752">observacion</text>
+<rect class="relbox" x="70" y="1885" width="1120" height="400" rx="16"/>
+<text class="legacytitle" x="92" y="1923">Relaciones principales</text>
+<text class="reltext" x="94" y="1963">Role 1 -> N User</text>
+<text class="reltext" x="94" y="1994">UsuarioEstado 1 -> N User</text>
+<text class="reltext" x="94" y="2025">Role 1 -> N RolePermiso</text>
+<text class="reltext" x="94" y="2056">Permiso 1 -> N RolePermiso</text>
+<text class="reltext" x="94" y="2087">User 1 -> N PasswordResetToken</text>
+<text class="reltext" x="94" y="2118">MesaEstado 1 -> N Mesa</text>
+<text class="reltext" x="94" y="2149">SectorMesaEstado 1 -> N SectorMesa</text>
+<text class="reltext" x="94" y="2180">SectorMesa 1 -> N Mesa</text>
+<text class="reltext" x="94" y="2211">User 1 -> N Mesa</text>
+<text class="reltext" x="94" y="2242">CategoriaProductoEstado 1 -> N CategoriaProducto</text>
+<text class="reltext" x="454" y="1963">CategoriaProducto 1 -> N Producto</text>
+<text class="reltext" x="454" y="1994">ProductoEstado 1 -> N Producto</text>
+<text class="reltext" x="454" y="2025">ProductoVisibilidad 1 -> N Producto</text>
+<text class="reltext" x="454" y="2056">Mesa 1 -> N Pedido</text>
+<text class="reltext" x="454" y="2087">User 1 -> N Pedido</text>
+<text class="reltext" x="454" y="2118">PedidoEstado 1 -> N Pedido</text>
+<text class="reltext" x="454" y="2149">PedidoEstadoCocina 1 -> N Pedido</text>
+<text class="reltext" x="454" y="2180">Pedido 1 -> N PedidoItem</text>
+<text class="reltext" x="454" y="2211">Producto 1 -> N PedidoItem</text>
+<text class="reltext" x="454" y="2242">PedidoItemEstado 1 -> N PedidoItem</text>
+<text class="reltext" x="814" y="1963">MotivoAnulacion 1 -> N PedidoItem</text>
+<text class="reltext" x="814" y="1994">MotivoAnulacionEstado 1 -> N MotivoAnulacion</text>
+<text class="reltext" x="814" y="2025">Mesa 1 -> N Cuenta</text>
+<text class="reltext" x="814" y="2056">User 1 -> N Cuenta</text>
+<text class="reltext" x="814" y="2087">CuentaEstado 1 -> N Cuenta</text>
+<text class="reltext" x="814" y="2118">MetodoPago 1 -> N Cuenta</text>
+<text class="reltext" x="814" y="2149">MetodoPagoEstado 1 -> N MetodoPago</text>
+<text class="reltext" x="814" y="2180">Cuenta 1 -> N CuentaDetalle</text>
+<text class="reltext" x="814" y="2211">Producto 1 -> N CuentaDetalle</text>
+<rect class="relbox" x="1220" y="1885" width="1080" height="400" rx="16"/>
+<text class="legacytitle" x="1242" y="1923">Columnas legacy fisicas</text>
+<text class="note" x="1242" y="1955">Quedaron como respaldo de migracion; la app usa las FK normalizadas.</text>
+<rect class="pill" x="1244" y="1972" width="470" height="34" rx="17"/>
+<text class="legacy" x="1260" y="1997">User: estado</text>
+<rect class="pill" x="1764" y="1972" width="470" height="34" rx="17"/>
+<text class="legacy" x="1780" y="1997">Mesa: estado, activa</text>
+<rect class="pill" x="1244" y="2020" width="470" height="34" rx="17"/>
+<text class="legacy" x="1260" y="2045">Producto: activo, visibleMenu</text>
+<rect class="pill" x="1764" y="2020" width="470" height="34" rx="17"/>
+<text class="legacy" x="1780" y="2045">Pedido: estado, estadoCocina</text>
+<rect class="pill" x="1244" y="2068" width="470" height="34" rx="17"/>
+<text class="legacy" x="1260" y="2093">PedidoItem: anulado, motivoAnulacion</text>
+<rect class="pill" x="1764" y="2068" width="470" height="34" rx="17"/>
+<text class="legacy" x="1780" y="2093">Cuenta: metodoPago, estado, detalleJson</text>
+<rect class="pill" x="1244" y="2116" width="470" height="34" rx="17"/>
+<text class="legacy" x="1260" y="2141">CategoriaProducto: visible</text>
+<rect class="pill" x="1764" y="2116" width="470" height="34" rx="17"/>
+<text class="legacy" x="1780" y="2141">MetodoPago: activo</text>
+<rect class="pill" x="1244" y="2164" width="470" height="34" rx="17"/>
+<text class="legacy" x="1260" y="2189">SectorMesa: activo</text>
+<rect class="pill" x="1764" y="2164" width="470" height="34" rx="17"/>
+<text class="legacy" x="1780" y="2189">MotivoAnulacion: activo</text>
+<rect class="pill" x="940" y="28" width="300" height="38" rx="19"/>
+<text class="legend" x="958" y="53">PK = clave primaria</text>
+<rect class="pill" x="1270" y="28" width="300" height="38" rx="19"/>
+<text class="legend" x="1288" y="53">FK = clave foranea</text>
+<rect class="pill" x="1600" y="28" width="300" height="38" rx="19"/>
+<text class="legend" x="1618" y="53">UK = valor unico</text>
+<rect class="pill" x="1930" y="28" width="300" height="38" rx="19"/>
+<text class="legend" x="1948" y="53">Tablas verdes = entidades centrales</text>
+</svg>

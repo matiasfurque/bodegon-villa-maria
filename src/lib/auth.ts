@@ -8,7 +8,7 @@ const COOKIE_NAME = "bvm_session";
 type SessionPayload = {
   userId: number;
   usuario: string;
-  role: string;
+  role?: string;
   exp: number;
 };
 
@@ -38,11 +38,10 @@ function decode(token?: string): SessionPayload | null {
   }
 }
 
-export function createSessionCookie(user: { id: number; usuario: string; role: { nombre: string } }) {
+export function createSessionCookie(user: { id: number; usuario: string }) {
   return encode({
     userId: user.id,
     usuario: user.usuario,
-    role: user.role.nombre,
     exp: Date.now() + 1000 * 60 * 60 * 8
   });
 }
@@ -72,18 +71,35 @@ export async function currentUser() {
   const payload = decode(jar.get(COOKIE_NAME)?.value);
   if (!payload) return null;
   return prisma.user.findFirst({
-    where: { id: payload.userId, estado: true },
+    where: { id: payload.userId, estado: { permiteAcceso: true } },
     select: {
       id: true,
       nombre: true,
       apellido: true,
       usuario: true,
       email: true,
-      role: { select: { nombre: true } }
+      estado: {
+        select: {
+          codigo: true,
+          nombre: true,
+          permiteAcceso: true
+        }
+      },
+      role: {
+        select: {
+          nombre: true,
+          permisos: {
+            select: {
+              permiso: {
+                select: {
+                  codigo: true,
+                  nombre: true
+                }
+              }
+            }
+          }
+        }
+      }
     }
   });
-}
-
-export function isAdmin(role?: string) {
-  return role === "Administrador";
 }

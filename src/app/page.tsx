@@ -9,11 +9,14 @@ export default async function HomePage() {
   let menuDisponible = true;
   const categorias = await prisma.categoriaProducto
     .findMany({
-      where: { visible: true },
+      where: { estado: { visibleEnMenu: true, habilitado: true } },
       orderBy: [{ orden: "asc" }, { nombre: "asc" }],
       include: {
         productos: {
-          where: { activo: true, visibleMenu: true },
+          where: {
+            estado: { permiteVenta: true },
+            visibilidad: { visibleEnMenu: true }
+          },
           orderBy: { nombre: "asc" }
         }
       }

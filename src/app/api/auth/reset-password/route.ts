@@ -22,10 +22,10 @@ export async function POST(request: NextRequest) {
   const tokenHash = hashPasswordResetToken(token);
   const resetToken = await prisma.passwordResetToken.findUnique({
     where: { tokenHash },
-    include: { user: { select: { id: true, estado: true } } }
+    include: { user: { select: { id: true, estado: { select: { permiteAcceso: true } } } } }
   });
 
-  if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date() || !resetToken.user.estado) {
+  if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date() || !resetToken.user.estado.permiteAcceso) {
     return json({ error: "El enlace de recuperación no es válido o ya venció" }, 400);
   }
 

@@ -7,25 +7,36 @@ import { BarChart3, ChefHat, ChevronDown, Edit3, KeyRound, LogOut, Minus, Plus, 
 import { money } from "@/lib/money";
 
 type Role = { id: number; nombre: string };
-type AuthUser = { id: number; nombre: string; apellido: string; usuario: string; email?: string | null; role: { nombre: string } };
+type PermissionCode = "inicio.ver" | "operaciones.gestionar" | "cocina.gestionar" | "productos.gestionar" | "usuarios.gestionar" | "reportes.ver" | "historial.ver";
+type RolePermission = { permiso: { codigo: PermissionCode | string; nombre: string } };
+type AuthUser = { id: number; nombre: string; apellido: string; usuario: string; email?: string | null; role: { nombre: string; permisos: RolePermission[] } };
 type User = { id: number; nombre: string; apellido: string; usuario: string; email?: string | null; telefono?: string | null; estado: boolean; roleId?: number; role: Role };
-type Mesa = { id: number; numero: number; descripcion?: string | null; capacidad: number; estado: string; activa: boolean };
+type Mesa = { id: number; numero: number; descripcion?: string | null; capacidad: number; estado: string; estadoCodigo?: string; estadoPermitePedido?: boolean; estadoLiberaMesa?: boolean; activa: boolean };
 type Categoria = { id: number; nombre: string; orden?: number | null; visible: boolean };
 type Producto = { id: number; nombre: string; descripcion?: string | null; precio: string; activo: boolean; visibleMenu: boolean; categoriaId: number; categoria: Categoria };
 type PedidoItem = { id: number; productoId: number; cantidad: number; precioUnitario: string; subtotal: string; observacion?: string | null; anulado: boolean; motivoAnulacion?: string | null; producto: Producto };
-type Pedido = { id: number; mesaId: number; estado: string; estadoCocina: string; observacion?: string | null; fechaHora: string; mesa?: Mesa; usuario?: { nombre: string; apellido: string; usuario: string }; items: PedidoItem[] };
+type Pedido = { id: number; mesaId: number; estado: string; estadoCodigo?: string; estadoActivo?: boolean; estadoCocina: string; estadoCocinaCodigo?: string; estadoCocinaPermiteAgregarItems?: boolean; estadoCocinaVisible?: boolean; estadoCocinaNotificaMozo?: boolean; observacion?: string | null; fechaHora: string; mesa?: Mesa; usuario?: { nombre: string; apellido: string; usuario: string }; items: PedidoItem[] };
 type OrderDraftItem = { draftId: string; productoId: number; nombre: string; cantidad: number; precio: number; observacion: string };
-type PaymentMethod = "Efectivo" | "Debito" | "Credito" | "Transferencia";
-type Cuenta = { id: number; fechaCierre: string; total: string; metodoPago: PaymentMethod; montoRecibido: string; vuelto: string; detalleJson: string; mesa: Mesa; usuarioCierre: { nombre: string; apellido: string; usuario: string } };
+type PaymentMethod = string;
+type Cuenta = { id: number; fechaCierre: string; total: string; metodoPago: PaymentMethod; metodoPagoCodigo?: string; metodoPagoRequiereMontoRecibido?: boolean; montoRecibido: string; vuelto: string; detalleJson: string; mesa: Mesa; usuarioCierre: { nombre: string; apellido: string; usuario: string } };
 type CuentaDetalleItem = { id: number; pedidoId: number; producto: string; cantidad: number; precioUnitario: number; subtotal: number; observacion?: string | null };
 type Report = { from: string; to: string; totalDia: number; totalPeriodo: number; cuentasHoy: number; cuentasPeriodo: number; mesasOcupadas: number; mesasAtendidasHoy: number; mesasAtendidasPeriodo: number; pedidosAnulados: number; cobrosPorMetodo: Array<{ metodo: string; cantidad: number; total: number }>; productosMasVendidos: Array<{ producto: string; cantidad: number; total: number }> };
 type ConfirmAction = { title: string; message: string; confirmLabel: string; onConfirm: () => Promise<void> };
 type SelectOption = { value: string | number; label: string };
+type MetodoPago = { id: number; codigo: string; nombre: string; requiereMontoRecibido: boolean };
+type CocinaEstado = { id: number; codigo: string; nombre: string; orden: number; permiteAgregarItems: boolean; visibleCocina: boolean; notificaMozo: boolean };
+type Catalogs = { metodosPago: MetodoPago[]; cocinaEstados: CocinaEstado[] };
 
-const tabs = ["Inicio", "Operaciones", "Cocina", "Productos", "Usuarios", "Reportes", "Historial"];
-const employeeTabs = ["Operaciones"];
-const cookTabs = ["Cocina"];
-const cocinaEstados = ["Pendiente", "En preparacion", "Listo", "Entregado"];
+const tabs: Array<{ label: string; permiso: PermissionCode }> = [
+  { label: "Inicio", permiso: "inicio.ver" },
+  { label: "Operaciones", permiso: "operaciones.gestionar" },
+  { label: "Cocina", permiso: "cocina.gestionar" },
+  { label: "Productos", permiso: "productos.gestionar" },
+  { label: "Usuarios", permiso: "usuarios.gestionar" },
+  { label: "Reportes", permiso: "reportes.ver" },
+  { label: "Historial", permiso: "historial.ver" }
+];
+const emptyCatalogs: Catalogs = { metodosPago: [], cocinaEstados: [] };
 
 async function api(path: string, options?: RequestInit) {
   const response = await fetch(path, {
@@ -39,11 +50,27 @@ async function api(path: string, options?: RequestInit) {
 
 export default function DashboardClient({ user }: { user: AuthUser }) {
   const router = useRouter();
-  const [active, setActive] = useState(user.role.nombre === "Administrador" ? "Inicio" : user.role.nombre === "Cocinero" ? "Cocina" : "Operaciones");
+  const permissionSet = useMemo(
+    () => new Set(user.role.permisos.map((item) => item.permiso.codigo)),
+    [user.role.permisos]
+  );
+  const visibleTabs = useMemo(
+    () => tabs.filter((tab) => permissionSet.has(tab.permiso)).map((tab) => tab.label),
+    [permissionSet]
+  );
+  const canViewInicio = permissionSet.has("inicio.ver");
+  const canManageOperaciones = permissionSet.has("operaciones.gestionar");
+  const canManageCocina = permissionSet.has("cocina.gestionar");
+  const canManageProducts = permissionSet.has("productos.gestionar");
+  const canManageUsers = permissionSet.has("usuarios.gestionar");
+  const canViewReports = permissionSet.has("reportes.ver");
+  const canViewHistory = permissionSet.has("historial.ver");
+  const [active, setActive] = useState(visibleTabs[0] || "Operaciones");
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [catalogs, setCatalogs] = useState<Catalogs>(emptyCatalogs);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [allPedidos, setAllPedidos] = useState<Pedido[]>([]);
@@ -78,17 +105,13 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const autoRefreshRunningRef = useRef(false);
   const actionRunningRef = useRef(false);
   const modalOpenRef = useRef(false);
-  const isAdmin = user.role.nombre === "Administrador";
-  const isCook = user.role.nombre === "Cocinero";
-  const visibleTabs = isAdmin ? tabs : isCook ? cookTabs : employeeTabs;
-
   const selectedMesa = mesas.find((mesa) => mesa.id === selectedMesaId) || mesas[0] || null;
   const nextMesaNumber = useMemo(
     () => Math.max(0, ...mesas.map((mesa) => mesa.numero)) + 1,
     [mesas]
   );
   const pedidosEnCurso = useMemo(
-    () => pedidos.filter((pedido) => pedido.estado === "Activo"),
+    () => pedidos.filter((pedido) => pedido.estadoActivo ?? pedido.estado === "Activo"),
     [pedidos]
   );
   const consumoTotal = useMemo(
@@ -113,6 +136,10 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
             observacion: item.observacion
           }))
       ),
+    [pedidosEnCurso]
+  );
+  const pedidosPendientesDeEntrega = useMemo(
+    () => pedidosEnCurso.filter((pedido) => pedido.estadoCocinaVisible ?? pedido.estadoCocina !== "Entregado"),
     [pedidosEnCurso]
   );
   const productStats = useMemo(
@@ -145,8 +172,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     () => ({
       total: users.length,
       activos: users.filter((item) => item.estado).length,
-      administradores: users.filter((item) => item.role.nombre === "Administrador").length,
-      empleados: users.filter((item) => item.role.nombre === "Empleado").length
+      inactivos: users.filter((item) => !item.estado).length,
+      rolesAsignados: new Set(users.map((item) => item.role.id)).size
     }),
     [users]
   );
@@ -160,7 +187,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     });
   }, [userRoleFilter, userSearch, userStatusFilter, users]);
   const activePedidosResumen = useMemo(() => {
-    const activePedidos = allPedidos.filter((pedido) => pedido.estado === "Activo");
+    const activePedidos = allPedidos.filter((pedido) => pedido.estadoActivo ?? pedido.estado === "Activo");
     const byMesa = new Map<number, { mesa: Mesa | null; pedidos: number; items: number; total: number; listos: number }>();
 
     for (const pedido of activePedidos) {
@@ -172,7 +199,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         listos: 0
       };
       current.pedidos += 1;
-      if (pedido.estadoCocina === "Listo") current.listos += 1;
+      if (pedido.estadoCocinaNotificaMozo ?? pedido.estadoCocina === "Listo") current.listos += 1;
       for (const item of pedido.items.filter((pedidoItem) => !pedidoItem.anulado)) {
         current.items += item.cantidad;
         current.total += Number(item.subtotal);
@@ -188,22 +215,22 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   );
   const kitchenOrders = useMemo(() => {
     const activeOrders = allPedidos
-      .filter((pedido) => pedido.estado === "Activo")
+      .filter((pedido) => pedido.estadoActivo ?? pedido.estado === "Activo")
       .filter((pedido) => pedido.items.some((item) => !item.anulado));
     const visibleOrders = kitchenStatusFilter === "Activas"
-      ? activeOrders.filter((pedido) => pedido.estadoCocina !== "Entregado")
+      ? activeOrders.filter((pedido) => pedido.estadoCocinaVisible ?? pedido.estadoCocina !== "Entregado")
       : activeOrders.filter((pedido) => pedido.estadoCocina === kitchenStatusFilter);
 
     return visibleOrders.sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime());
   }, [allPedidos, kitchenStatusFilter]);
   const dashboardStats = useMemo(() => {
     const mesasActivas = mesas.filter((mesa) => mesa.activa);
-    const mesasOcupadas = mesasActivas.filter((mesa) => mesa.estado === "Ocupada").length;
+    const mesasOcupadas = mesasActivas.filter((mesa) => mesa.estadoPermitePedido ?? mesa.estado === "Ocupada").length;
     const consumoAbierto = activePedidosResumen.reduce((sum, mesa) => sum + mesa.total, 0);
     const ultimaCuenta = cuentas[0] || null;
     return {
       mesasOcupadas,
-      mesasLibres: mesasActivas.filter((mesa) => mesa.estado === "Libre").length,
+      mesasLibres: mesasActivas.filter((mesa) => mesa.estadoLiberaMesa ?? mesa.estado === "Libre").length,
       consumoAbierto,
       cuentasAbiertas: activePedidosResumen.length,
       ventasHoy: report?.totalPeriodo || 0,
@@ -253,25 +280,30 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }
 
   async function loadAll() {
-    const [mesasData, categoriasData, productosData, allPedidosData] = await Promise.all([
+    const [mesasData, categoriasData, productosData, allPedidosData, catalogsData] = await Promise.all([
       api("/api/mesas"),
       api("/api/categories"),
       api("/api/products"),
-      api("/api/pedidos")
+      api("/api/pedidos"),
+      api("/api/catalogs")
     ]);
     setMesas(mesasData);
     setCategorias(categoriasData);
     setProductos(productosData);
     setAllPedidos(allPedidosData);
-    if (isAdmin) {
-      const [rolesData, usersData, reportData] = await Promise.all([
+    setCatalogs(catalogsData);
+    if (canManageUsers) {
+      const [rolesData, usersData] = await Promise.all([
         api("/api/roles"),
-        api("/api/users"),
-        api("/api/reports")
+        api("/api/users")
       ]);
       setRoles(rolesData);
       setUsers(usersData);
-      setReport(reportData);
+    }
+    if (canViewReports) {
+      setReport(await api("/api/reports"));
+    }
+    if (canViewHistory) {
       await loadCuentas();
     }
     const mesaId = selectedMesaId || mesasData[0]?.id;
@@ -387,14 +419,14 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       throw new Error("Selecciona al menos un producto");
     }
 
-    if (selectedMesa.estado !== "Ocupada") {
+    if (!(selectedMesa.estadoPermitePedido ?? selectedMesa.estado === "Ocupada")) {
       await api(`/api/mesas/${selectedMesa.id}`, {
         method: "PATCH",
         body: JSON.stringify({ estado: "Ocupada" })
       });
     }
 
-    const activePedido = pedidos.find((pedido) => pedido.estado === "Activo" && ["Pendiente", "En preparacion"].includes(pedido.estadoCocina));
+    const activePedido = pedidos.find((pedido) => (pedido.estadoActivo ?? pedido.estado === "Activo") && (pedido.estadoCocinaPermiteAgregarItems ?? ["Pendiente", "En preparacion"].includes(pedido.estadoCocina)));
     if (activePedido) {
       for (const item of items) {
         await api(`/api/pedidos/${activePedido.id}/items`, {
@@ -415,6 +447,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     if (!selectedMesa) return;
     if (consumoTotal <= 0) {
       setMessage("No hay consumos para cerrar en esta mesa");
+      return;
+    }
+    if (pedidosPendientesDeEntrega.length > 0) {
+      const estados = Array.from(new Set(pedidosPendientesDeEntrega.map((pedido) => pedido.estadoCocina))).join(", ");
+      setMessage(`No se puede cerrar todavía: hay pedidos sin entregar (${estados}).`);
       return;
     }
     setShowCloseAccount(true);
@@ -510,7 +547,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       </div>
       {message && <p className={isErrorMessage(message) ? "error" : "notice"}>{message}</p>}
 
-      {active === "Inicio" && isAdmin && (
+      {active === "Inicio" && canViewInicio && (
         <section className="dashboard-home">
           <div className="panel dashboard-hero">
             <div>
@@ -539,9 +576,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                   <h2>Mesas en curso</h2>
                   <p className="muted">Consumos abiertos que necesitan seguimiento.</p>
                 </div>
-                <button className="btn" onClick={() => setActive("Operaciones")}>
-                  <Table2 size={17} /> Ver operaciones
-                </button>
+                {canManageOperaciones && (
+                  <button className="btn" onClick={() => setActive("Operaciones")}>
+                    <Table2 size={17} /> Ver operaciones
+                  </button>
+                )}
               </div>
               {activePedidosResumen.length === 0 ? (
                 <p className="muted detail-empty">No hay mesas con pedidos activos.</p>
@@ -554,7 +593,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                       type="button"
                       onClick={() => {
                         if (item.mesa?.id) selectMesa(item.mesa.id);
-                        setActive("Operaciones");
+                        if (canManageOperaciones) setActive("Operaciones");
                       }}
                     >
                       <span>
@@ -574,9 +613,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                   <h2>Actividad reciente</h2>
                   <p className="muted">Ultimos cierres registrados.</p>
                 </div>
-                <button className="btn" onClick={() => setActive("Historial")}>
-                  <Receipt size={17} /> Ver historial
-                </button>
+                {canViewHistory && (
+                  <button className="btn" onClick={() => setActive("Historial")}>
+                    <Receipt size={17} /> Ver historial
+                  </button>
+                )}
               </div>
               {cuentas.slice(0, 5).length === 0 ? (
                 <p className="muted detail-empty">Todavia no hay cuentas cerradas.</p>
@@ -604,17 +645,17 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
               </div>
             </div>
             <div className="quick-actions">
-              <button className="btn primary" onClick={() => setActive("Operaciones")}><Plus size={17} /> Cargar pedido</button>
-              <button className="btn" onClick={() => setActive("Cocina")}><ChefHat size={17} /> Ver cocina</button>
-              <button className="btn" onClick={() => setActive("Productos")}><Edit3 size={17} /> Editar productos</button>
-              <button className="btn" onClick={() => setActive("Reportes")}><BarChart3 size={17} /> Ver reportes</button>
-              <button className="btn" onClick={() => setActive("Usuarios")}><KeyRound size={17} /> Gestionar usuarios</button>
+              {canManageOperaciones && <button className="btn primary" onClick={() => setActive("Operaciones")}><Plus size={17} /> Cargar pedido</button>}
+              {canManageCocina && <button className="btn" onClick={() => setActive("Cocina")}><ChefHat size={17} /> Ver cocina</button>}
+              {canManageProducts && <button className="btn" onClick={() => setActive("Productos")}><Edit3 size={17} /> Editar productos</button>}
+              {canViewReports && <button className="btn" onClick={() => setActive("Reportes")}><BarChart3 size={17} /> Ver reportes</button>}
+              {canManageUsers && <button className="btn" onClick={() => setActive("Usuarios")}><KeyRound size={17} /> Gestionar usuarios</button>}
             </div>
           </section>
         </section>
       )}
 
-      {active === "Operaciones" && (
+      {active === "Operaciones" && canManageOperaciones && (
         <section className="workspace">
           <div className="panel">
             <div className="section-head">
@@ -667,7 +708,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
               <>
                 <p className={`status ${selectedMesa.estado}`}>{selectedMesa.estado}</p>
                 <div className="actions">
-                  {selectedMesa.estado === "Ocupada" ? (
+                  {(selectedMesa.estadoPermitePedido ?? selectedMesa.estado === "Ocupada") ? (
                     <button
                       className="btn"
                       disabled={pedidosEnCurso.length > 0}
@@ -681,7 +722,12 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                       Ocupar
                     </button>
                   )}
-                  <button className="btn primary" onClick={openCloseAccountDialog}>
+                  <button
+                    className="btn primary"
+                    disabled={pedidosPendientesDeEntrega.length > 0}
+                    title={pedidosPendientesDeEntrega.length > 0 ? "Para cerrar la cuenta, todos los pedidos tienen que estar entregados." : undefined}
+                    onClick={openCloseAccountDialog}
+                  >
                     <Receipt size={17} /> Cerrar cuenta
                   </button>
                   <button className="btn danger" onClick={() => confirmDanger({
@@ -693,6 +739,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                     <Trash2 size={17} /> Baja
                   </button>
                 </div>
+                {pedidosPendientesDeEntrega.length > 0 && (
+                  <p className="muted">
+                    Para cerrar la cuenta, primero marcá como entregados los pedidos pendientes.
+                  </p>
+                )}
                 <CollapsibleSection title="Editar mesa">
                   <MesaEditForm mesa={selectedMesa} onSubmit={(body) => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify(body) }), "Mesa modificada")} />
                 </CollapsibleSection>
@@ -709,7 +760,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         </section>
       )}
 
-      {active === "Cocina" && (
+      {active === "Cocina" && canManageCocina && (
         <section className="panel kitchen-board">
           <div className="section-head">
             <div>
@@ -718,9 +769,9 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
             </div>
             <div className="preset-filter" aria-label="Filtro de pedidos">
               <button className={kitchenStatusFilter === "Activas" ? "active" : ""} type="button" onClick={() => setKitchenStatusFilter("Activas")}>Activas</button>
-              {cocinaEstados.map((estado) => (
-                <button className={kitchenStatusFilter === estado ? "active" : ""} key={estado} type="button" onClick={() => setKitchenStatusFilter(estado)}>
-                  {estado}
+              {catalogs.cocinaEstados.map((estado) => (
+                <button className={kitchenStatusFilter === estado.nombre ? "active" : ""} key={estado.codigo} type="button" onClick={() => setKitchenStatusFilter(estado.nombre)}>
+                  {estado.nombre}
                 </button>
               ))}
             </div>
@@ -733,8 +784,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
               {kitchenOrders.map((pedido) => {
                 const activeItems = pedido.items.filter((item) => !item.anulado);
                 const totalItems = activeItems.reduce((sum, item) => sum + item.cantidad, 0);
-                const currentIndex = cocinaEstados.indexOf(pedido.estadoCocina);
-                const nextStatus = cocinaEstados[Math.min(currentIndex + 1, cocinaEstados.length - 1)];
+                const currentIndex = catalogs.cocinaEstados.findIndex((estado) => estado.nombre === pedido.estadoCocina);
+                const nextStatus = catalogs.cocinaEstados[Math.min(Math.max(currentIndex, 0) + 1, Math.max(catalogs.cocinaEstados.length - 1, 0))];
 
                 return (
                   <article className="kitchen-ticket" key={pedido.id}>
@@ -757,22 +808,22 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                     </div>
 
                     <div className="kitchen-actions">
-                      {cocinaEstados.map((estado) => (
+                      {catalogs.cocinaEstados.map((estado) => (
                         <button
-                          className={`btn ${pedido.estadoCocina === estado ? "primary" : ""}`}
-                          disabled={pedido.estadoCocina === estado}
-                          key={estado}
+                          className={`btn ${pedido.estadoCocina === estado.nombre ? "primary" : ""}`}
+                          disabled={pedido.estadoCocina === estado.nombre}
+                          key={estado.codigo}
                           type="button"
-                          onClick={() => updateKitchenStatus(pedido.id, estado)}
+                          onClick={() => updateKitchenStatus(pedido.id, estado.codigo)}
                         >
-                          {estado}
+                          {estado.nombre}
                         </button>
                       ))}
                     </div>
 
-                    {pedido.estadoCocina !== "Entregado" && nextStatus !== pedido.estadoCocina && (
-                      <button className="btn primary kitchen-next" type="button" onClick={() => updateKitchenStatus(pedido.id, nextStatus)}>
-                        Pasar a {nextStatus}
+                    {nextStatus && pedido.estadoCocina !== nextStatus.nombre && nextStatus.visibleCocina && (
+                      <button className="btn primary kitchen-next" type="button" onClick={() => updateKitchenStatus(pedido.id, nextStatus.codigo)}>
+                        Pasar a {nextStatus.nombre}
                       </button>
                     )}
                   </article>
@@ -783,7 +834,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         </section>
       )}
 
-      {active === "Productos" && isAdmin && (
+      {active === "Productos" && canManageProducts && (
         <section className="workspace">
           <div className="panel">
             <div className="section-head">
@@ -921,7 +972,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         </section>
       )}
 
-      {active === "Usuarios" && isAdmin && (
+      {active === "Usuarios" && canManageUsers && (
         <section className="workspace">
           <div className="panel">
             <div className="section-head">
@@ -933,8 +984,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
             <div className="stats-grid compact-stats">
               <Stat label="Total usuarios" value={userStats.total} />
               <Stat label="Activos" value={userStats.activos} />
-              <Stat label="Administradores" value={userStats.administradores} />
-              <Stat label="Empleados" value={userStats.empleados} />
+              <Stat label="Inactivos" value={userStats.inactivos} />
+              <Stat label="Roles usados" value={userStats.rolesAsignados} />
             </div>
             <div className="product-filters">
               <label className="field search-field">
@@ -1029,7 +1080,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         </section>
       )}
 
-      {active === "Reportes" && report && (
+      {active === "Reportes" && canViewReports && report && (
         <section className="panel">
           <div className="section-head">
             <div>
@@ -1087,7 +1138,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         </section>
       )}
 
-      {active === "Historial" && (
+      {active === "Historial" && canViewHistory && (
         <section className="panel">
           <div className="section-head">
             <div>
@@ -1135,6 +1186,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           mesa={selectedMesa}
           items={cuentaDetalle}
           total={consumoTotal}
+          metodosPago={catalogs.metodosPago}
           onCancel={() => setShowCloseAccount(false)}
           onConfirm={(payment) =>
             run(async () => {
@@ -1563,26 +1615,31 @@ function CloseAccountDialog({
   mesa,
   items,
   total,
+  metodosPago,
   onCancel,
   onConfirm
 }: {
   mesa: Mesa;
   items: CuentaDetalleItem[];
   total: number;
+  metodosPago: MetodoPago[];
   onCancel: () => void;
   onConfirm: (payment: { metodoPago: PaymentMethod; montoRecibido: number }) => void;
 }) {
-  const [metodoPago, setMetodoPago] = useState<PaymentMethod>("Efectivo");
+  const defaultMetodo = metodosPago[0]?.nombre || "Efectivo";
+  const [metodoPago, setMetodoPago] = useState<PaymentMethod>(defaultMetodo);
   const [montoRecibido, setMontoRecibido] = useState(total);
-  const efectivoInsuficiente = metodoPago === "Efectivo" && montoRecibido < total;
-  const importeCobrado = metodoPago === "Efectivo" ? montoRecibido : total;
-  const vuelto = metodoPago === "Efectivo" ? Math.max(0, montoRecibido - total) : 0;
+  const selectedMetodo = metodosPago.find((metodo) => metodo.nombre === metodoPago || metodo.codigo === metodoPago);
+  const requiereMontoRecibido = selectedMetodo?.requiereMontoRecibido ?? metodoPago === "Efectivo";
+  const efectivoInsuficiente = requiereMontoRecibido && montoRecibido < total;
+  const importeCobrado = requiereMontoRecibido ? montoRecibido : total;
+  const vuelto = requiereMontoRecibido ? Math.max(0, montoRecibido - total) : 0;
 
   useEffect(() => {
-    if (metodoPago !== "Efectivo") {
+    if (!requiereMontoRecibido) {
       setMontoRecibido(total);
     }
-  }, [metodoPago, total]);
+  }, [requiereMontoRecibido, total]);
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -1630,16 +1687,11 @@ function CloseAccountDialog({
             <PrettySelect
               value={metodoPago}
               onChange={(value) => setMetodoPago(String(value) as PaymentMethod)}
-              options={[
-                { value: "Efectivo", label: "Efectivo" },
-                { value: "Debito", label: "Debito" },
-                { value: "Credito", label: "Credito" },
-                { value: "Transferencia", label: "Transferencia" }
-              ]}
+              options={(metodosPago.length ? metodosPago : [{ id: 0, codigo: "PAGO_EFECTIVO", nombre: "Efectivo", requiereMontoRecibido: true }]).map((metodo) => ({ value: metodo.nombre, label: metodo.nombre }))}
             />
           </label>
 
-          {metodoPago === "Efectivo" ? (
+          {requiereMontoRecibido ? (
             <Field label="Monto recibido" type="number" value={montoRecibido} onChange={(value) => setMontoRecibido(Number(value) || 0)} wide />
           ) : (
             <div className="payment-note">
@@ -1825,7 +1877,7 @@ function PedidoList({
               </div>
               <div className="actions">
                 <strong>{money(item.subtotal)}</strong>
-                {!item.anulado && pedido.estado === "Activo" && (
+                {!item.anulado && (pedido.estadoActivo ?? pedido.estado === "Activo") && (
                   <button className="btn danger" onClick={() => confirmDanger({
                     title: `Anular ${item.producto.nombre}`,
                     message: `Se va a anular ${item.cantidad} x ${item.producto.nombre} del pedido #${pedido.id}. El movimiento queda registrado como correccion de pedido.`,
@@ -1939,7 +1991,7 @@ function parseCuentaDetalle(value: string): CuentaDetalleItem[] {
       .map((item) => ({
         id: Number(item.id || 0),
         pedidoId: Number(item.pedidoId || 0),
-        producto: String(item.producto || "Producto"),
+        producto: String(item.producto || item.productoNombre || "Producto"),
         cantidad: Number(item.cantidad || 0),
         precioUnitario: Number(item.precioUnitario || 0),
         subtotal: Number(item.subtotal || 0),

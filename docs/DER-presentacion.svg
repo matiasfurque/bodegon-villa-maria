@@ -1,0 +1,388 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3400" height="2900" viewBox="0 0 3400 2900">
+<rect width="100%" height="100%" fill="#f6efe3"/>
+<text x="60" y="78" font-size="58" font-weight="900" fill="#082f24">DER normalizado - Bodegon Villa Maria</text>
+<text x="62" y="120" font-size="26" fill="#6d5b4d">PostgreSQL en Neon. Las relaciones se leen en las FK de cada tabla para evitar flechas cruzadas.</text>
+<rect x="1320" y="42" width="330" height="48" rx="24" fill="#e2f2ea" stroke="#a9d4c3"/>
+<text x="1344" y="73" font-size="22" font-weight="700" fill="#082f24">PK = clave primaria</text>
+<rect x="1700" y="42" width="330" height="48" rx="24" fill="#e2f2ea" stroke="#a9d4c3"/>
+<text x="1724" y="73" font-size="22" font-weight="700" fill="#082f24">FK = clave foranea</text>
+<rect x="2060" y="42" width="330" height="48" rx="24" fill="#e2f2ea" stroke="#a9d4c3"/>
+<text x="2084" y="73" font-size="22" font-weight="700" fill="#082f24">UK = valor unico</text>
+<rect x="2420" y="42" width="390" height="48" rx="24" fill="#e2f2ea" stroke="#a9d4c3"/>
+<text x="2444" y="73" font-size="22" font-weight="700" fill="#082f24">Borde verde = tabla central</text>
+<rect x="60" y="170" width="1040" height="950" rx="24" fill="#fff8ed" stroke="#d9c7ad" stroke-width="3"/>
+<text x="94" y="228" font-size="36" font-weight="900" fill="#082f24">ACCESOS Y SEGURIDAD</text>
+<rect x="90" y="250" width="360" height="157" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="90" y="250" width="360" height="54" rx="14" fill="#0f5a36"/>
+<path d="M90,290 h360 v14 h-360z" fill="#0f5a36"/>
+<text x="112" y="286" font-size="25" font-weight="800" fill="white">Role</text>
+<text x="114" y="334" font-size="20" fill="#2d2a24">id PK</text>
+<text x="114" y="361" font-size="20" fill="#2d2a24">nombre UK</text>
+<text x="114" y="388" font-size="20" fill="#2d2a24">descripcion</text>
+<rect x="90" y="455" width="360" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="90" y="455" width="360" height="54" rx="14" fill="#0f5a36"/>
+<path d="M90,495 h360 v14 h-360z" fill="#0f5a36"/>
+<text x="112" y="491" font-size="25" font-weight="800" fill="white">Permiso</text>
+<text x="114" y="539" font-size="20" fill="#2d2a24">id PK</text>
+<text x="114" y="566" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="114" y="593" font-size="20" fill="#2d2a24">nombre</text>
+<text x="114" y="620" font-size="20" fill="#2d2a24">descripcion</text>
+<rect x="90" y="690" width="360" height="196" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="90" y="690" width="360" height="54" rx="14" fill="#0f5a36"/>
+<path d="M90,730 h360 v14 h-360z" fill="#0f5a36"/>
+<text x="112" y="726" font-size="25" font-weight="800" fill="white">RolePermiso</text>
+<text x="114" y="774" font-size="20" fill="#2d2a24">id PK</text>
+<rect x="106" y="787" width="328" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="115" y="808" font-size="18" fill="#4d3c15">roleId FK -&gt; Role.id</text>
+<rect x="106" y="817" width="328" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="115" y="838" font-size="18" fill="#4d3c15">permisoId FK -&gt;</text>
+<text x="115" y="863" font-size="18" fill="#4d3c15">Permiso.id</text>
+<rect x="560" y="250" width="390" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="560" y="250" width="390" height="54" rx="14" fill="#0f5a36"/>
+<path d="M560,290 h390 v14 h-390z" fill="#0f5a36"/>
+<text x="582" y="286" font-size="25" font-weight="800" fill="white">UsuarioEstado</text>
+<text x="584" y="334" font-size="20" fill="#2d2a24">id PK</text>
+<text x="584" y="361" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="584" y="388" font-size="20" fill="#2d2a24">nombre</text>
+<text x="584" y="415" font-size="20" fill="#2d2a24">permiteAcceso</text>
+<rect x="560" y="470" width="390" height="358" rx="14" fill="#fffdf8" stroke="#0f5a36" stroke-width="5"/>
+<rect x="560" y="470" width="390" height="54" rx="14" fill="#0f5a36"/>
+<path d="M560,510 h390 v14 h-390z" fill="#0f5a36"/>
+<text x="582" y="506" font-size="25" font-weight="800" fill="white">User</text>
+<text x="584" y="554" font-size="20" fill="#2d2a24">id PK</text>
+<text x="584" y="581" font-size="20" fill="#2d2a24">nombre</text>
+<text x="584" y="608" font-size="20" fill="#2d2a24">apellido</text>
+<text x="584" y="635" font-size="20" fill="#2d2a24">usuario UK</text>
+<text x="584" y="662" font-size="20" fill="#2d2a24">passwordHash</text>
+<text x="584" y="689" font-size="20" fill="#2d2a24">email</text>
+<text x="584" y="716" font-size="20" fill="#2d2a24">telefono</text>
+<rect x="576" y="729" width="358" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="585" y="750" font-size="18" fill="#4d3c15">estadoId FK -&gt;</text>
+<text x="585" y="775" font-size="18" fill="#4d3c15">UsuarioEstado.id</text>
+<rect x="576" y="784" width="358" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="585" y="805" font-size="18" fill="#4d3c15">roleId FK -&gt; Role.id</text>
+<rect x="560" y="820" width="390" height="223" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="560" y="820" width="390" height="54" rx="14" fill="#0f5a36"/>
+<path d="M560,860 h390 v14 h-390z" fill="#0f5a36"/>
+<text x="582" y="856" font-size="25" font-weight="800" fill="white">PasswordResetToken</text>
+<text x="584" y="904" font-size="20" fill="#2d2a24">id PK</text>
+<text x="584" y="931" font-size="20" fill="#2d2a24">tokenHash UK</text>
+<text x="584" y="958" font-size="20" fill="#2d2a24">expiresAt</text>
+<text x="584" y="985" font-size="20" fill="#2d2a24">usedAt</text>
+<rect x="576" y="998" width="358" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="585" y="1019" font-size="18" fill="#4d3c15">userId FK -&gt; User.id</text>
+<rect x="1160" y="170" width="770" height="950" rx="24" fill="#fff8ed" stroke="#d9c7ad" stroke-width="3"/>
+<text x="1194" y="228" font-size="36" font-weight="900" fill="#082f24">MESAS</text>
+<rect x="1210" y="250" width="310" height="211" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="1210" y="250" width="310" height="54" rx="14" fill="#0f5a36"/>
+<path d="M1210,290 h310 v14 h-310z" fill="#0f5a36"/>
+<text x="1232" y="286" font-size="25" font-weight="800" fill="white">MesaEstado</text>
+<text x="1234" y="334" font-size="20" fill="#2d2a24">id PK</text>
+<text x="1234" y="361" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="1234" y="388" font-size="20" fill="#2d2a24">nombre</text>
+<text x="1234" y="415" font-size="20" fill="#2d2a24">permitePedido</text>
+<text x="1234" y="442" font-size="20" fill="#2d2a24">liberaMesa</text>
+<rect x="1560" y="250" width="310" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="1560" y="250" width="310" height="54" rx="14" fill="#0f5a36"/>
+<path d="M1560,290 h310 v14 h-310z" fill="#0f5a36"/>
+<text x="1582" y="286" font-size="25" font-weight="800" fill="white">SectorMesaEstado</text>
+<text x="1584" y="334" font-size="20" fill="#2d2a24">id PK</text>
+<text x="1584" y="361" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="1584" y="388" font-size="20" fill="#2d2a24">nombre</text>
+<text x="1584" y="415" font-size="20" fill="#2d2a24">habilitado</text>
+<rect x="1210" y="560" width="310" height="250" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="1210" y="560" width="310" height="54" rx="14" fill="#0f5a36"/>
+<path d="M1210,600 h310 v14 h-310z" fill="#0f5a36"/>
+<text x="1232" y="596" font-size="25" font-weight="800" fill="white">SectorMesa</text>
+<text x="1234" y="644" font-size="20" fill="#2d2a24">id PK</text>
+<text x="1234" y="671" font-size="20" fill="#2d2a24">nombre UK</text>
+<text x="1234" y="698" font-size="20" fill="#2d2a24">descripcion</text>
+<text x="1234" y="725" font-size="20" fill="#2d2a24">orden</text>
+<rect x="1226" y="738" width="278" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1235" y="759" font-size="18" fill="#4d3c15">estadoId FK -&gt;</text>
+<text x="1235" y="784" font-size="18" fill="#4d3c15">SectorMesaEstado.id</text>
+<rect x="1560" y="535" width="310" height="385" rx="14" fill="#fffdf8" stroke="#0f5a36" stroke-width="5"/>
+<rect x="1560" y="535" width="310" height="54" rx="14" fill="#0f5a36"/>
+<path d="M1560,575 h310 v14 h-310z" fill="#0f5a36"/>
+<text x="1582" y="571" font-size="25" font-weight="800" fill="white">Mesa</text>
+<text x="1584" y="619" font-size="20" fill="#2d2a24">id PK</text>
+<text x="1584" y="646" font-size="20" fill="#2d2a24">numero UK</text>
+<text x="1584" y="673" font-size="20" fill="#2d2a24">descripcion</text>
+<text x="1584" y="700" font-size="20" fill="#2d2a24">capacidad</text>
+<text x="1584" y="727" font-size="20" fill="#2d2a24">abiertaAt</text>
+<rect x="1576" y="740" width="278" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1585" y="761" font-size="18" fill="#4d3c15">estadoId FK -&gt;</text>
+<text x="1585" y="786" font-size="18" fill="#4d3c15">MesaEstado.id</text>
+<rect x="1576" y="795" width="278" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1585" y="816" font-size="18" fill="#4d3c15">sectorId FK -&gt;</text>
+<text x="1585" y="841" font-size="18" fill="#4d3c15">SectorMesa.id</text>
+<rect x="1576" y="850" width="278" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1585" y="871" font-size="18" fill="#4d3c15">abiertaPor FK -&gt;</text>
+<text x="1585" y="896" font-size="18" fill="#4d3c15">User.id</text>
+<rect x="1990" y="170" width="1350" height="950" rx="24" fill="#fff8ed" stroke="#d9c7ad" stroke-width="3"/>
+<text x="2024" y="228" font-size="36" font-weight="900" fill="#082f24">CARTA Y PRODUCTOS</text>
+<rect x="2040" y="250" width="440" height="211" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="2040" y="250" width="440" height="54" rx="14" fill="#0f5a36"/>
+<path d="M2040,290 h440 v14 h-440z" fill="#0f5a36"/>
+<text x="2062" y="286" font-size="25" font-weight="800" fill="white">CategoriaProductoEstado</text>
+<text x="2064" y="334" font-size="20" fill="#2d2a24">id PK</text>
+<text x="2064" y="361" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="2064" y="388" font-size="20" fill="#2d2a24">nombre</text>
+<text x="2064" y="415" font-size="20" fill="#2d2a24">visibleEnMenu</text>
+<text x="2064" y="442" font-size="20" fill="#2d2a24">habilitado</text>
+<rect x="2040" y="560" width="440" height="223" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="2040" y="560" width="440" height="54" rx="14" fill="#0f5a36"/>
+<path d="M2040,600 h440 v14 h-440z" fill="#0f5a36"/>
+<text x="2062" y="596" font-size="25" font-weight="800" fill="white">CategoriaProducto</text>
+<text x="2064" y="644" font-size="20" fill="#2d2a24">id PK</text>
+<text x="2064" y="671" font-size="20" fill="#2d2a24">nombre UK</text>
+<text x="2064" y="698" font-size="20" fill="#2d2a24">orden</text>
+<rect x="2056" y="711" width="408" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="2065" y="732" font-size="18" fill="#4d3c15">estadoId FK -&gt;</text>
+<text x="2065" y="757" font-size="18" fill="#4d3c15">CategoriaProductoEstado.id</text>
+<rect x="2535" y="250" width="330" height="211" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="2535" y="250" width="330" height="54" rx="14" fill="#0f5a36"/>
+<path d="M2535,290 h330 v14 h-330z" fill="#0f5a36"/>
+<text x="2557" y="286" font-size="25" font-weight="800" fill="white">ProductoEstado</text>
+<text x="2559" y="334" font-size="20" fill="#2d2a24">id PK</text>
+<text x="2559" y="361" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="2559" y="388" font-size="20" fill="#2d2a24">nombre</text>
+<text x="2559" y="415" font-size="20" fill="#2d2a24">permiteVenta</text>
+<text x="2559" y="442" font-size="20" fill="#2d2a24">esBajaLogica</text>
+<rect x="2905" y="250" width="330" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="2905" y="250" width="330" height="54" rx="14" fill="#0f5a36"/>
+<path d="M2905,290 h330 v14 h-330z" fill="#0f5a36"/>
+<text x="2927" y="286" font-size="25" font-weight="800" fill="white">ProductoVisibilidad</text>
+<text x="2929" y="334" font-size="20" fill="#2d2a24">id PK</text>
+<text x="2929" y="361" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="2929" y="388" font-size="20" fill="#2d2a24">nombre</text>
+<text x="2929" y="415" font-size="20" fill="#2d2a24">visibleEnMenu</text>
+<rect x="2535" y="560" width="700" height="277" rx="14" fill="#fffdf8" stroke="#0f5a36" stroke-width="5"/>
+<rect x="2535" y="560" width="700" height="54" rx="14" fill="#0f5a36"/>
+<path d="M2535,600 h700 v14 h-700z" fill="#0f5a36"/>
+<text x="2557" y="596" font-size="25" font-weight="800" fill="white">Producto</text>
+<text x="2559" y="644" font-size="20" fill="#2d2a24">id PK</text>
+<text x="2559" y="671" font-size="20" fill="#2d2a24">nombre</text>
+<text x="2559" y="698" font-size="20" fill="#2d2a24">descripcion</text>
+<text x="2559" y="725" font-size="20" fill="#2d2a24">precio</text>
+<rect x="2551" y="738" width="668" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="2560" y="759" font-size="18" fill="#4d3c15">categoriaId FK -&gt; CategoriaProducto.id</text>
+<rect x="2551" y="768" width="668" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="2560" y="789" font-size="18" fill="#4d3c15">estadoId FK -&gt; ProductoEstado.id</text>
+<rect x="2551" y="798" width="668" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="2560" y="819" font-size="18" fill="#4d3c15">visibilidadId FK -&gt; ProductoVisibilidad.id</text>
+<rect x="60" y="1180" width="1640" height="760" rx="24" fill="#fff8ed" stroke="#d9c7ad" stroke-width="3"/>
+<text x="94" y="1238" font-size="36" font-weight="900" fill="#082f24">PEDIDOS Y COCINA</text>
+<rect x="110" y="1260" width="320" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="110" y="1260" width="320" height="54" rx="14" fill="#0f5a36"/>
+<path d="M110,1300 h320 v14 h-320z" fill="#0f5a36"/>
+<text x="132" y="1296" font-size="25" font-weight="800" fill="white">PedidoEstado</text>
+<text x="134" y="1344" font-size="20" fill="#2d2a24">id PK</text>
+<text x="134" y="1371" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="134" y="1398" font-size="20" fill="#2d2a24">nombre</text>
+<text x="134" y="1425" font-size="20" fill="#2d2a24">esActivo</text>
+<rect x="460" y="1260" width="390" height="238" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="460" y="1260" width="390" height="54" rx="14" fill="#0f5a36"/>
+<path d="M460,1300 h390 v14 h-390z" fill="#0f5a36"/>
+<text x="482" y="1296" font-size="25" font-weight="800" fill="white">PedidoEstadoCocina</text>
+<text x="484" y="1344" font-size="20" fill="#2d2a24">id PK</text>
+<text x="484" y="1371" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="484" y="1398" font-size="20" fill="#2d2a24">nombre</text>
+<text x="484" y="1425" font-size="20" fill="#2d2a24">permiteAgregarItems</text>
+<text x="484" y="1452" font-size="20" fill="#2d2a24">visibleCocina</text>
+<text x="484" y="1479" font-size="20" fill="#2d2a24">notificaMozo</text>
+<rect x="890" y="1260" width="370" height="331" rx="14" fill="#fffdf8" stroke="#0f5a36" stroke-width="5"/>
+<rect x="890" y="1260" width="370" height="54" rx="14" fill="#0f5a36"/>
+<path d="M890,1300 h370 v14 h-370z" fill="#0f5a36"/>
+<text x="912" y="1296" font-size="25" font-weight="800" fill="white">Pedido</text>
+<text x="914" y="1344" font-size="20" fill="#2d2a24">id PK</text>
+<text x="914" y="1371" font-size="20" fill="#2d2a24">fechaHora</text>
+<text x="914" y="1398" font-size="20" fill="#2d2a24">observacion</text>
+<rect x="906" y="1411" width="338" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="915" y="1432" font-size="18" fill="#4d3c15">mesaId FK -&gt; Mesa.id</text>
+<rect x="906" y="1441" width="338" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="915" y="1462" font-size="18" fill="#4d3c15">usuarioId FK -&gt; User.id</text>
+<rect x="906" y="1471" width="338" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="915" y="1492" font-size="18" fill="#4d3c15">estadoId FK -&gt;</text>
+<text x="915" y="1517" font-size="18" fill="#4d3c15">PedidoEstado.id</text>
+<rect x="906" y="1526" width="338" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="915" y="1547" font-size="18" fill="#4d3c15">estadoCocinaId FK -&gt;</text>
+<text x="915" y="1572" font-size="18" fill="#4d3c15">PedidoEstadoCocina.id</text>
+<rect x="1300" y="1260" width="340" height="439" rx="14" fill="#fffdf8" stroke="#0f5a36" stroke-width="5"/>
+<rect x="1300" y="1260" width="340" height="54" rx="14" fill="#0f5a36"/>
+<path d="M1300,1300 h340 v14 h-340z" fill="#0f5a36"/>
+<text x="1322" y="1296" font-size="25" font-weight="800" fill="white">PedidoItem</text>
+<text x="1324" y="1344" font-size="20" fill="#2d2a24">id PK</text>
+<text x="1324" y="1371" font-size="20" fill="#2d2a24">cantidad</text>
+<text x="1324" y="1398" font-size="20" fill="#2d2a24">precioUnitario</text>
+<text x="1324" y="1425" font-size="20" fill="#2d2a24">subtotal</text>
+<text x="1324" y="1452" font-size="20" fill="#2d2a24">observacion</text>
+<rect x="1316" y="1465" width="308" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1325" y="1486" font-size="18" fill="#4d3c15">pedidoId FK -&gt;</text>
+<text x="1325" y="1511" font-size="18" fill="#4d3c15">Pedido.id</text>
+<rect x="1316" y="1520" width="308" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1325" y="1541" font-size="18" fill="#4d3c15">productoId FK -&gt;</text>
+<text x="1325" y="1566" font-size="18" fill="#4d3c15">Producto.id</text>
+<rect x="1316" y="1575" width="308" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1325" y="1596" font-size="18" fill="#4d3c15">estadoId FK -&gt;</text>
+<text x="1325" y="1621" font-size="18" fill="#4d3c15">PedidoItemEstado.id</text>
+<rect x="1316" y="1630" width="308" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1325" y="1651" font-size="18" fill="#4d3c15">motivoAnulacionId FK</text>
+<text x="1325" y="1676" font-size="18" fill="#4d3c15">-&gt; MotivoAnulacion.id</text>
+<rect x="110" y="1600" width="320" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="110" y="1600" width="320" height="54" rx="14" fill="#0f5a36"/>
+<path d="M110,1640 h320 v14 h-320z" fill="#0f5a36"/>
+<text x="132" y="1636" font-size="25" font-weight="800" fill="white">PedidoItemEstado</text>
+<text x="134" y="1684" font-size="20" fill="#2d2a24">id PK</text>
+<text x="134" y="1711" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="134" y="1738" font-size="20" fill="#2d2a24">nombre</text>
+<text x="134" y="1765" font-size="20" fill="#2d2a24">esAnulado</text>
+<rect x="460" y="1600" width="390" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="460" y="1600" width="390" height="54" rx="14" fill="#0f5a36"/>
+<path d="M460,1640 h390 v14 h-390z" fill="#0f5a36"/>
+<text x="482" y="1636" font-size="25" font-weight="800" fill="white">MotivoAnulacionEstado</text>
+<text x="484" y="1684" font-size="20" fill="#2d2a24">id PK</text>
+<text x="484" y="1711" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="484" y="1738" font-size="20" fill="#2d2a24">nombre</text>
+<text x="484" y="1765" font-size="20" fill="#2d2a24">habilitado</text>
+<rect x="890" y="1600" width="370" height="250" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="890" y="1600" width="370" height="54" rx="14" fill="#0f5a36"/>
+<path d="M890,1640 h370 v14 h-370z" fill="#0f5a36"/>
+<text x="912" y="1636" font-size="25" font-weight="800" fill="white">MotivoAnulacion</text>
+<text x="914" y="1684" font-size="20" fill="#2d2a24">id PK</text>
+<text x="914" y="1711" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="914" y="1738" font-size="20" fill="#2d2a24">nombre</text>
+<text x="914" y="1765" font-size="20" fill="#2d2a24">descripcion</text>
+<rect x="906" y="1778" width="338" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="915" y="1799" font-size="18" fill="#4d3c15">estadoId FK -&gt;</text>
+<text x="915" y="1824" font-size="18" fill="#4d3c15">MotivoAnulacionEstado.id</text>
+<rect x="1760" y="1180" width="1580" height="760" rx="24" fill="#fff8ed" stroke="#d9c7ad" stroke-width="3"/>
+<text x="1794" y="1238" font-size="36" font-weight="900" fill="#082f24">CUENTAS Y COBROS</text>
+<rect x="1810" y="1260" width="360" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="1810" y="1260" width="360" height="54" rx="14" fill="#0f5a36"/>
+<path d="M1810,1300 h360 v14 h-360z" fill="#0f5a36"/>
+<text x="1832" y="1296" font-size="25" font-weight="800" fill="white">MetodoPagoEstado</text>
+<text x="1834" y="1344" font-size="20" fill="#2d2a24">id PK</text>
+<text x="1834" y="1371" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="1834" y="1398" font-size="20" fill="#2d2a24">nombre</text>
+<text x="1834" y="1425" font-size="20" fill="#2d2a24">habilitado</text>
+<rect x="2210" y="1260" width="430" height="250" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="2210" y="1260" width="430" height="54" rx="14" fill="#0f5a36"/>
+<path d="M2210,1300 h430 v14 h-430z" fill="#0f5a36"/>
+<text x="2232" y="1296" font-size="25" font-weight="800" fill="white">MetodoPago</text>
+<text x="2234" y="1344" font-size="20" fill="#2d2a24">id PK</text>
+<text x="2234" y="1371" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="2234" y="1398" font-size="20" fill="#2d2a24">nombre</text>
+<text x="2234" y="1425" font-size="20" fill="#2d2a24">requiereMontoRecibido</text>
+<rect x="2226" y="1438" width="398" height="59" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="2235" y="1459" font-size="18" fill="#4d3c15">estadoId FK -&gt;</text>
+<text x="2235" y="1484" font-size="18" fill="#4d3c15">MetodoPagoEstado.id</text>
+<rect x="2690" y="1260" width="360" height="184" rx="14" fill="#fffdf8" stroke="#d9c7ad" stroke-width="3"/>
+<rect x="2690" y="1260" width="360" height="54" rx="14" fill="#0f5a36"/>
+<path d="M2690,1300 h360 v14 h-360z" fill="#0f5a36"/>
+<text x="2712" y="1296" font-size="25" font-weight="800" fill="white">CuentaEstado</text>
+<text x="2714" y="1344" font-size="20" fill="#2d2a24">id PK</text>
+<text x="2714" y="1371" font-size="20" fill="#2d2a24">codigo UK</text>
+<text x="2714" y="1398" font-size="20" fill="#2d2a24">nombre</text>
+<text x="2714" y="1425" font-size="20" fill="#2d2a24">esCerrada</text>
+<rect x="1810" y="1570" width="530" height="331" rx="14" fill="#fffdf8" stroke="#0f5a36" stroke-width="5"/>
+<rect x="1810" y="1570" width="530" height="54" rx="14" fill="#0f5a36"/>
+<path d="M1810,1610 h530 v14 h-530z" fill="#0f5a36"/>
+<text x="1832" y="1606" font-size="25" font-weight="800" fill="white">Cuenta</text>
+<text x="1834" y="1654" font-size="20" fill="#2d2a24">id PK</text>
+<text x="1834" y="1681" font-size="20" fill="#2d2a24">fechaCierre</text>
+<text x="1834" y="1708" font-size="20" fill="#2d2a24">total</text>
+<text x="1834" y="1735" font-size="20" fill="#2d2a24">montoRecibido</text>
+<text x="1834" y="1762" font-size="20" fill="#2d2a24">vuelto</text>
+<rect x="1826" y="1775" width="498" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1835" y="1796" font-size="18" fill="#4d3c15">mesaId FK -&gt; Mesa.id</text>
+<rect x="1826" y="1805" width="498" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1835" y="1826" font-size="18" fill="#4d3c15">usuarioCierreId FK -&gt; User.id</text>
+<rect x="1826" y="1835" width="498" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1835" y="1856" font-size="18" fill="#4d3c15">metodoPagoId FK -&gt; MetodoPago.id</text>
+<rect x="1826" y="1865" width="498" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="1835" y="1886" font-size="18" fill="#4d3c15">estadoId FK -&gt; CuentaEstado.id</text>
+<rect x="2400" y="1570" width="560" height="331" rx="14" fill="#fffdf8" stroke="#0f5a36" stroke-width="5"/>
+<rect x="2400" y="1570" width="560" height="54" rx="14" fill="#0f5a36"/>
+<path d="M2400,1610 h560 v14 h-560z" fill="#0f5a36"/>
+<text x="2422" y="1606" font-size="25" font-weight="800" fill="white">CuentaDetalle</text>
+<text x="2424" y="1654" font-size="20" fill="#2d2a24">id PK</text>
+<text x="2424" y="1681" font-size="20" fill="#2d2a24">productoNombre</text>
+<text x="2424" y="1708" font-size="20" fill="#2d2a24">cantidad</text>
+<text x="2424" y="1735" font-size="20" fill="#2d2a24">precioUnitario</text>
+<text x="2424" y="1762" font-size="20" fill="#2d2a24">subtotal</text>
+<text x="2424" y="1789" font-size="20" fill="#2d2a24">observacion</text>
+<rect x="2416" y="1802" width="528" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="2425" y="1823" font-size="18" fill="#4d3c15">cuentaId FK -&gt; Cuenta.id</text>
+<rect x="2416" y="1832" width="528" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="2425" y="1853" font-size="18" fill="#4d3c15">pedidoId ref historica</text>
+<rect x="2416" y="1862" width="528" height="34" rx="8" fill="#fff8e5" stroke="#e7b94d"/>
+<text x="2425" y="1883" font-size="18" fill="#4d3c15">productoId FK -&gt; Producto.id</text>
+<rect x="60" y="2030" width="3280" height="680" rx="24" fill="#fff8ed" stroke="#d9c7ad" stroke-width="3"/>
+<text x="94" y="2088" font-size="36" font-weight="900" fill="#082f24">RELACIONES PRINCIPALES Y COLUMNAS LEGACY</text>
+<rect x="95" y="2125" width="2020" height="520" rx="16" fill="#fffdf8" stroke="#d9c7ad"/>
+<text x="123" y="2167" font-size="27" font-weight="800" fill="#082f24">Mapa de relaciones</text>
+<text x="123.0" y="2213" font-size="21" fill="#2d2a24">Role 1:N User</text>
+<text x="628.0" y="2213" font-size="21" fill="#2d2a24">UsuarioEstado 1:N User</text>
+<text x="1133.0" y="2213" font-size="21" fill="#2d2a24">Role N:M Permiso mediante RolePermiso</text>
+<text x="1638.0" y="2213" font-size="21" fill="#2d2a24">User 1:N PasswordResetToken</text>
+<text x="123.0" y="2269" font-size="21" fill="#2d2a24">MesaEstado 1:N Mesa</text>
+<text x="628.0" y="2269" font-size="21" fill="#2d2a24">SectorMesaEstado 1:N SectorMesa</text>
+<text x="1133.0" y="2269" font-size="21" fill="#2d2a24">SectorMesa 1:N Mesa</text>
+<text x="1638.0" y="2269" font-size="21" fill="#2d2a24">User 1:N Mesa abierta</text>
+<text x="123.0" y="2325" font-size="21" fill="#2d2a24">CategoriaProductoEstado 1:N CategoriaProducto</text>
+<text x="628.0" y="2325" font-size="21" fill="#2d2a24">CategoriaProducto 1:N Producto</text>
+<text x="1133.0" y="2325" font-size="21" fill="#2d2a24">ProductoEstado 1:N Producto</text>
+<text x="1638.0" y="2325" font-size="21" fill="#2d2a24">ProductoVisibilidad 1:N Producto</text>
+<text x="123.0" y="2381" font-size="21" fill="#2d2a24">Mesa 1:N Pedido</text>
+<text x="628.0" y="2381" font-size="21" fill="#2d2a24">User 1:N Pedido</text>
+<text x="1133.0" y="2381" font-size="21" fill="#2d2a24">PedidoEstado 1:N Pedido</text>
+<text x="1638.0" y="2381" font-size="21" fill="#2d2a24">PedidoEstadoCocina 1:N Pedido</text>
+<text x="123.0" y="2437" font-size="21" fill="#2d2a24">Pedido 1:N PedidoItem</text>
+<text x="628.0" y="2437" font-size="21" fill="#2d2a24">Producto 1:N PedidoItem</text>
+<text x="1133.0" y="2437" font-size="21" fill="#2d2a24">PedidoItemEstado 1:N PedidoItem</text>
+<text x="1638.0" y="2437" font-size="21" fill="#2d2a24">MotivoAnulacion 1:N PedidoItem</text>
+<text x="123.0" y="2493" font-size="21" fill="#2d2a24">MotivoAnulacionEstado 1:N MotivoAnulacion</text>
+<text x="628.0" y="2493" font-size="21" fill="#2d2a24">Mesa 1:N Cuenta</text>
+<text x="1133.0" y="2493" font-size="21" fill="#2d2a24">User 1:N Cuenta cerrada</text>
+<text x="1638.0" y="2493" font-size="21" fill="#2d2a24">MetodoPago 1:N Cuenta</text>
+<text x="123.0" y="2549" font-size="21" fill="#2d2a24">MetodoPagoEstado 1:N MetodoPago</text>
+<text x="628.0" y="2549" font-size="21" fill="#2d2a24">CuentaEstado 1:N Cuenta</text>
+<text x="1133.0" y="2549" font-size="21" fill="#2d2a24">Cuenta 1:N CuentaDetalle</text>
+<text x="1638.0" y="2549" font-size="21" fill="#2d2a24">Producto 1:N CuentaDetalle</text>
+<rect x="2160" y="2125" width="1135" height="520" rx="16" fill="#fffdf8" stroke="#d9c7ad"/>
+<text x="2188" y="2167" font-size="27" font-weight="800" fill="#082f24">Columnas legacy / respaldo</text>
+<text x="2188" y="2201" font-size="20" fill="#6d5b4d">Existen fisicamente por migracion; el sistema usa las FK normalizadas.</text>
+<rect x="2188" y="2240" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2206" y="2260" font-size="19" fill="#536157">User.estado</text>
+<rect x="2723" y="2240" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2741" y="2260" font-size="19" fill="#536157">Mesa.estado</text>
+<rect x="2188" y="2282" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2206" y="2302" font-size="19" fill="#536157">Mesa.activa</text>
+<rect x="2723" y="2282" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2741" y="2302" font-size="19" fill="#536157">Producto.activo</text>
+<rect x="2188" y="2324" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2206" y="2344" font-size="19" fill="#536157">Producto.visibleMenu</text>
+<rect x="2723" y="2324" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2741" y="2344" font-size="19" fill="#536157">Pedido.estado</text>
+<rect x="2188" y="2366" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2206" y="2386" font-size="19" fill="#536157">Pedido.estadoCocina</text>
+<rect x="2723" y="2366" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2741" y="2386" font-size="19" fill="#536157">PedidoItem.anulado</text>
+<rect x="2188" y="2408" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2206" y="2428" font-size="19" fill="#536157">PedidoItem.motivoAnulacion</text>
+<rect x="2723" y="2408" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2741" y="2428" font-size="19" fill="#536157">Cuenta.metodoPago</text>
+<rect x="2188" y="2450" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2206" y="2470" font-size="19" fill="#536157">Cuenta.estado</text>
+<rect x="2723" y="2450" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2741" y="2470" font-size="19" fill="#536157">Cuenta.detalleJson</text>
+<rect x="2188" y="2492" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2206" y="2512" font-size="19" fill="#536157">CategoriaProducto.visible</text>
+<rect x="2723" y="2492" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2741" y="2512" font-size="19" fill="#536157">MetodoPago.activo</text>
+<rect x="2188" y="2534" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2206" y="2554" font-size="19" fill="#536157">SectorMesa.activo</text>
+<rect x="2723" y="2534" width="500" height="28" rx="14" fill="#e8f4ed" stroke="#bddccb"/>
+<text x="2741" y="2554" font-size="19" fill="#536157">MotivoAnulacion.activo</text>
+</svg>

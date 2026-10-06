@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const user = await prisma.user.findFirst({
-    where: { id: session.userId, estado: true },
+    where: { id: session.userId, estado: { permiteAcceso: true } },
     select: { id: true, passwordHash: true }
   });
   if (!user || !verifyPassword(currentPassword, user.passwordHash)) {

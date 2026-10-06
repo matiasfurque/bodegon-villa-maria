@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { json, requireAdmin } from "@/lib/api";
+import { json, requirePermission } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 function parseLocalDate(value: string) {
@@ -8,7 +8,7 @@ function parseLocalDate(value: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requirePermission(request, "reportes.ver");
   if (auth.error) return auth.error;
 
   const from = request.nextUrl.searchParams.get("from");
@@ -21,28 +21,26 @@ export async function GET(request: NextRequest) {
   const [cuentas, mesas, anulados, items] = await Promise.all([
     prisma.cuenta.findMany({
       where: { fechaCierre: { gte: start, lte: end } },
-      include: { mesa: true }
+      include: { mesa: { include: { estado: true } }, metodoPago: true }
     }),
-    prisma.mesa.findMany(),
+    prisma.mesa.findMany({ include: { estado: true } }),
     prisma.pedidoItem.count({
       where: {
-        anulado: true,
+        estado: { esAnulado: true },
         pedido: { fechaHora: { gte: start, lte: end } }
       }
     }),
-    prisma.pedidoItem.findMany({
+    prisma.cuentaDetalle.findMany({
       where: {
-        anulado: false,
-        pedido: { fechaHora: { gte: start, lte: end } }
-      },
-      include: { producto: true }
+        cuenta: { fechaCierre: { gte: start, lte: end } }
+      }
     })
   ]);
 
   const totalPeriodo = cuentas.reduce((sum, cuenta) => sum + Number(cuenta.total), 0);
   const cobrosPorMetodo = new Map<string, { metodo: string; cantidad: number; total: number }>();
   for (const cuenta of cuentas) {
-    const metodo = cuenta.metodoPago || "Efectivo";
+    const metodo = cuenta.metodoPago.nombre;
     const current = cobrosPorMetodo.get(metodo) || { metodo, cantidad: 0, total: 0 };
     current.cantidad += 1;
     current.total += Number(cuenta.total);
@@ -50,14 +48,14 @@ export async function GET(request: NextRequest) {
   }
   const productos = new Map<string, { producto: string; cantidad: number; total: number }>();
   for (const item of items) {
-    const current = productos.get(item.producto.nombre) || {
-      producto: item.producto.nombre,
+    const current = productos.get(item.productoNombre) || {
+      producto: item.productoNombre,
       cantidad: 0,
       total: 0
     };
     current.cantidad += item.cantidad;
     current.total += Number(item.subtotal);
-    productos.set(item.producto.nombre, current);
+    productos.set(item.productoNombre, current);
   }
 
   return json({
@@ -67,7 +65,7 @@ export async function GET(request: NextRequest) {
     totalPeriodo,
     cuentasHoy: cuentas.length,
     cuentasPeriodo: cuentas.length,
-    mesasOcupadas: mesas.filter((mesa) => mesa.estado === "Ocupada").length,
+    mesasOcupadas: mesas.filter((mesa) => mesa.estado.permitePedido).length,
     mesasAtendidasHoy: new Set(cuentas.map((cuenta) => cuenta.mesaId)).size,
     mesasAtendidasPeriodo: new Set(cuentas.map((cuenta) => cuenta.mesaId)).size,
     pedidosAnulados: anulados,

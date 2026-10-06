@@ -1,10 +1,23 @@
 import { NextRequest } from "next/server";
-import { asBool, json, requireAdmin } from "@/lib/api";
+import { json, requirePermission } from "@/lib/api";
+import { CODES, usuarioEstadoBy } from "@/lib/normalized";
 import { hashPassword, validatePasswordStrength } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
+function serializeUser(user: {
+  estado: { nombre: string; codigo: string; permiteAcceso: boolean };
+} & Record<string, unknown>) {
+  const { passwordHash: _passwordHash, ...safeUser } = user;
+  return {
+    ...safeUser,
+    estado: user.estado.permiteAcceso,
+    estadoNombre: user.estado.nombre,
+    estadoCodigo: user.estado.codigo
+  };
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = requireAdmin(request);
+  const auth = await requirePermission(request, "usuarios.gestionar");
   if (auth.error) return auth.error;
   const { id } = await params;
   const data = await request.json();
@@ -21,13 +34,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     where: { usuario, NOT: { id: userId } }
   });
   if (existing) return json({ error: "Ya existe un usuario con ese nombre de usuario" }, 400);
+  const estado = await usuarioEstadoBy(data.estado);
   const update: Record<string, unknown> = {
     nombre,
     apellido,
     usuario,
     telefono: String(data.telefono || "").trim() || null,
     email: email || null,
-    estado: asBool(data.estado),
+    estadoId: estado.id,
     roleId: Number(data.roleId)
   };
   if (data.password) {
@@ -38,25 +52,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const user = await prisma.user.update({
     where: { id: userId },
     data: update,
-    include: { role: true }
+    include: { role: true, estado: true }
   });
-  const { passwordHash: _passwordHash, ...safeUser } = user;
-  return json(safeUser);
+  return json(serializeUser(user));
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = requireAdmin(request);
+  const auth = await requirePermission(request, "usuarios.gestionar");
   if (auth.error) return auth.error;
   const { id } = await params;
   const userId = Number(id);
   if (auth.session?.userId === userId) {
     return json({ error: "No podés darte de baja a vos mismo" }, 400);
   }
+  const inactivo = await usuarioEstadoBy(CODES.usuario.inactivo);
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { estado: false },
-    include: { role: true }
+    data: { estadoId: inactivo.id },
+    include: { role: true, estado: true }
   });
-  const { passwordHash: _passwordHash, ...safeUser } = user;
-  return json(safeUser);
+  return json(serializeUser(user));
 }
