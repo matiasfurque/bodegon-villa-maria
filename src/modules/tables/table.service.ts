@@ -35,21 +35,25 @@ export const tableService = {
   },
 
   async create(input: TableCreateInput) {
-    const existing = await tableRepository.findByNumber(prisma, input.numero);
+    const existing = await tableRepository.findIdByNumber(prisma, input.numero);
     if (existing) {
-      const sector = await tableRepository.upsertSector(prisma, sectorName(input.descripcion || existing.descripcion));
       return withLockedTable(existing.id, async (tx) => {
         const current = await tableRepository.findByIdOrThrow(tx, existing.id);
-        const estado = existing.estado.codigo === CODES.mesa.cerrada && current.estado.codigo === CODES.mesa.cerrada
+        if (current.numero !== input.numero) {
+          return { error: "No se pudo crear la mesa. Revisá que el número no exista." };
+        }
+        const estado = current.estado.codigo === CODES.mesa.cerrada
           ? await tableRepository.findStateByCode(tx, CODES.mesa.libre)
           : current.estado;
         if (estado.codigo === CODES.mesa.libre) {
           const blocked = await activeOrdersBlock(tx, current.id, "release");
           if (blocked) return blocked;
         }
+        const descripcion = input.descripcion || current.descripcion;
+        const sector = await tableRepository.upsertSector(tx, sectorName(descripcion));
         const mesa = await tableRepository.update(tx, current.id, {
           capacidad: input.capacidad,
-          descripcion: input.descripcion || existing.descripcion,
+          descripcion,
           sectorId: sector.id,
           estadoId: estado.id
         });
@@ -58,16 +62,18 @@ export const tableService = {
     }
 
     try {
-      const estado = await tableRepository.findState(prisma, stateText(input.estado), CODES.mesa.libre);
-      const sector = await tableRepository.upsertSector(prisma, sectorName(input.descripcion));
-      const mesa = await tableRepository.create(prisma, {
-        numero: input.numero,
-        capacidad: input.capacidad,
-        descripcion: input.descripcion || null,
-        sectorId: sector.id,
-        estadoId: estado.id
-      });
-      return { mesa, created: true };
+      return await prisma.$transaction(async (tx) => {
+        const estado = await tableRepository.findState(tx, stateText(input.estado), CODES.mesa.libre);
+        const sector = await tableRepository.upsertSector(tx, sectorName(input.descripcion));
+        const mesa = await tableRepository.create(tx, {
+          numero: input.numero,
+          capacidad: input.capacidad,
+          descripcion: input.descripcion || null,
+          sectorId: sector.id,
+          estadoId: estado.id
+        });
+        return { mesa, created: true };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
     } catch {
       return { error: "No se pudo crear la mesa. Revisá que el número no exista." };
     }
@@ -75,7 +81,6 @@ export const tableService = {
 
   async update(id: number, input: TableUpdateInput, userId?: number) {
     const estado = input.estado === undefined ? null : await tableRepository.findState(prisma, stateText(input.estado), CODES.mesa.libre);
-    const sector = input.descripcion === undefined ? null : await tableRepository.upsertSector(prisma, sectorName(input.descripcion));
 
     return withLockedTable(id, async (tx) => {
       if (estado?.codigo === CODES.mesa.libre || estado?.codigo === CODES.mesa.cerrada) {
@@ -83,6 +88,7 @@ export const tableService = {
         if (blocked) return blocked;
       }
 
+      const sector = input.descripcion === undefined ? null : await tableRepository.upsertSector(tx, sectorName(input.descripcion));
       const mesa = await tableRepository.update(tx, id, {
         numero: input.numero === undefined ? undefined : Number(input.numero),
         capacidad: input.capacidad === undefined ? undefined : Number(input.capacidad),

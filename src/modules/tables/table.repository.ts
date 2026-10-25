@@ -10,8 +10,8 @@ export const tableRepository = {
     return db.mesa.findMany({ orderBy: { numero: "asc" }, include: withRelations });
   },
 
-  findByNumber(db: TableDb, numero: number) {
-    return db.mesa.findUnique({ where: { numero }, include: withRelations });
+  findIdByNumber(db: TableDb, numero: number) {
+    return db.mesa.findUnique({ where: { numero }, select: { id: true } });
   },
 
   findByIdOrThrow(db: TableDb, id: number) {

@@ -262,29 +262,35 @@ function mesaTransaction(activePedidos: number, estado: typeof mesaLibre | typeo
 describe("liberacion y baja de mesa", () => {
   it("crea una mesa nueva con estado libre y devuelve 201", async () => {
     prismaMock.mesa.findUnique.mockResolvedValue(null);
-    prismaMock.mesaEstado.findFirstOrThrow.mockResolvedValue(mesaLibre);
-    prismaMock.sectorMesaEstado.findUniqueOrThrow.mockResolvedValue({ id: 1 });
-    prismaMock.sectorMesa.upsert.mockResolvedValue({ id: 4, nombre: "General" });
-    prismaMock.mesa.create.mockResolvedValue({ id: 1, numero: 1, capacidad: 4, estado: mesaLibre, sector: { nombre: "General" } });
+    const tx = {
+      mesaEstado: { findFirstOrThrow: vi.fn().mockResolvedValue(mesaLibre) },
+      sectorMesaEstado: { findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }) },
+      sectorMesa: { upsert: vi.fn().mockResolvedValue({ id: 4, nombre: "General" }) },
+      mesa: { create: vi.fn().mockResolvedValue({ id: 1, numero: 1, capacidad: 4, estado: mesaLibre, sector: { nombre: "General" } }) }
+    };
+    useTransaction(tx);
 
     const response = await createMesa(request({ numero: 1, capacidad: 4 }));
     expect(response.status).toBe(201);
-    expect(prismaMock.mesa.create).toHaveBeenCalledWith(expect.objectContaining({
+    expect(tx.mesa.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ numero: 1, capacidad: 4, estadoId: mesaLibre.id, sectorId: 4 })
     }));
+    expect(tx.sectorMesa.upsert.mock.invocationCallOrder[0]).toBeLessThan(tx.mesa.create.mock.invocationCallOrder[0]);
+    expect(prismaMock.sectorMesa.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.mesa.create).not.toHaveBeenCalled();
   });
 
   it("reactiva una mesa dada de baja con el bloqueo antes de validar pedidos", async () => {
-    prismaMock.mesa.findUnique.mockResolvedValue({ id: 1, descripcion: "Patio", estado: mesaCerrada });
-    prismaMock.sectorMesaEstado.findUniqueOrThrow.mockResolvedValue({ id: 1 });
-    prismaMock.sectorMesa.upsert.mockResolvedValue({ id: 4 });
+    prismaMock.mesa.findUnique.mockResolvedValue({ id: 1 });
     const tx = {
       $queryRaw: vi.fn().mockResolvedValue([{ id: 1 }]),
       mesa: {
-        findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1, estado: mesaCerrada }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1, numero: 1, descripcion: "Patio", estado: mesaCerrada }),
         update: vi.fn().mockResolvedValue({ id: 1, estado: mesaLibre, sector: { nombre: "Patio" } })
       },
       mesaEstado: { findUniqueOrThrow: vi.fn().mockResolvedValue(mesaLibre) },
+      sectorMesaEstado: { findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }) },
+      sectorMesa: { upsert: vi.fn().mockResolvedValue({ id: 4 }) },
       pedido: { count: vi.fn().mockResolvedValue(0) }
     };
     useTransaction(tx);
@@ -292,24 +298,64 @@ describe("liberacion y baja de mesa", () => {
     const response = await createMesa(request({ numero: 1, capacidad: 4 }));
     expect(response.status).toBe(200);
     expect(tx.mesa.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ estadoId: mesaLibre.id }) }));
-    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.pedido.count.mock.invocationCallOrder[0]);
-    expect(tx.pedido.count.mock.invocationCallOrder[0]).toBeLessThan(tx.mesa.update.mock.invocationCallOrder[0]);
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.mesa.findUniqueOrThrow.mock.invocationCallOrder[0]);
+    expect(tx.mesa.findUniqueOrThrow.mock.invocationCallOrder[0]).toBeLessThan(tx.pedido.count.mock.invocationCallOrder[0]);
+    expect(tx.pedido.count.mock.invocationCallOrder[0]).toBeLessThan(tx.sectorMesa.upsert.mock.invocationCallOrder[0]);
+    expect(tx.sectorMesa.upsert.mock.invocationCallOrder[0]).toBeLessThan(tx.mesa.update.mock.invocationCallOrder[0]);
+    expect(prismaMock.sectorMesa.upsert).not.toHaveBeenCalled();
   });
 
   it("no reactiva una mesa dada de baja si conserva pedidos activos", async () => {
-    prismaMock.mesa.findUnique.mockResolvedValue({ id: 1, descripcion: "Patio", estado: mesaCerrada });
-    prismaMock.sectorMesaEstado.findUniqueOrThrow.mockResolvedValue({ id: 1 });
-    prismaMock.sectorMesa.upsert.mockResolvedValue({ id: 4 });
+    prismaMock.mesa.findUnique.mockResolvedValue({ id: 1 });
     const tx = {
       $queryRaw: vi.fn().mockResolvedValue([{ id: 1 }]),
-      mesa: { findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1, estado: mesaCerrada }), update: vi.fn() },
+      mesa: { findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1, numero: 1, descripcion: "Patio", estado: mesaCerrada }), update: vi.fn() },
       mesaEstado: { findUniqueOrThrow: vi.fn().mockResolvedValue(mesaLibre) },
+      sectorMesa: { upsert: vi.fn() },
       pedido: { count: vi.fn().mockResolvedValue(1) }
+    };
+    useTransaction(tx);
+
+    const response = await createMesa(request({ numero: 1, capacidad: 4, descripcion: "Nuevo sector" }));
+    expect(response.status).toBe(400);
+    expect(tx.sectorMesa.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.sectorMesa.upsert).not.toHaveBeenCalled();
+    expect(tx.mesa.update).not.toHaveBeenCalled();
+  });
+
+  it("rechaza una mesa nueva si falla la creacion dentro de la transaccion", async () => {
+    prismaMock.mesa.findUnique.mockResolvedValue(null);
+    const tx = {
+      mesaEstado: { findFirstOrThrow: vi.fn().mockResolvedValue(mesaLibre) },
+      sectorMesaEstado: { findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }) },
+      sectorMesa: { upsert: vi.fn().mockResolvedValue({ id: 4 }) },
+      mesa: { create: vi.fn().mockRejectedValue(new Error("Numero duplicado")) }
+    };
+    useTransaction(tx);
+
+    const response = await createMesa(request({ numero: 1, capacidad: 4, descripcion: "Patio" }));
+    expect(response.status).toBe(400);
+    expect(tx.sectorMesa.upsert).toHaveBeenCalledOnce();
+    expect(tx.mesa.create).toHaveBeenCalledOnce();
+    expect(prismaMock.sectorMesa.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.mesa.create).not.toHaveBeenCalled();
+  });
+
+  it("no modifica otra mesa si el numero cambio antes de obtener el bloqueo", async () => {
+    prismaMock.mesa.findUnique.mockResolvedValue({ id: 1 });
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 1 }]),
+      mesa: { findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1, numero: 2, descripcion: "Patio", estado: mesaCerrada }), update: vi.fn() },
+      sectorMesa: { upsert: vi.fn() },
+      pedido: { count: vi.fn() }
     };
     useTransaction(tx);
 
     const response = await createMesa(request({ numero: 1, capacidad: 4 }));
     expect(response.status).toBe(400);
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.mesa.findUniqueOrThrow.mock.invocationCallOrder[0]);
+    expect(tx.pedido.count).not.toHaveBeenCalled();
+    expect(tx.sectorMesa.upsert).not.toHaveBeenCalled();
     expect(tx.mesa.update).not.toHaveBeenCalled();
   });
 
@@ -336,6 +382,43 @@ describe("liberacion y baja de mesa", () => {
     const response = await updateMesa(request({ estado: "Libre" }), params(1));
     expect(response.status).toBe(400);
     expect(tx.mesa.update).not.toHaveBeenCalled();
+  });
+
+  it("no actualiza el sector si liberar la mesa se rechaza", async () => {
+    prismaMock.mesaEstado.findFirstOrThrow.mockResolvedValue(mesaLibre);
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 1 }]),
+      pedido: { count: vi.fn().mockResolvedValue(1) },
+      sectorMesa: { upsert: vi.fn() },
+      mesa: { update: vi.fn() }
+    };
+    useTransaction(tx);
+
+    const response = await updateMesa(request({ estado: "Libre", descripcion: "Nuevo sector" }), params(1));
+    expect(response.status).toBe(400);
+    expect(tx.sectorMesa.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.sectorMesa.upsert).not.toHaveBeenCalled();
+    expect(tx.mesa.update).not.toHaveBeenCalled();
+  });
+
+  it("actualiza sector y mesa en el mismo tx despues de validar pedidos", async () => {
+    prismaMock.mesaEstado.findFirstOrThrow.mockResolvedValue(mesaLibre);
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 1 }]),
+      pedido: { count: vi.fn().mockResolvedValue(0) },
+      sectorMesaEstado: { findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }) },
+      sectorMesa: { upsert: vi.fn().mockResolvedValue({ id: 4 }) },
+      mesa: { update: vi.fn().mockResolvedValue({ id: 1, estado: mesaLibre, sector: { nombre: "Patio" } }) }
+    };
+    useTransaction(tx);
+
+    const response = await updateMesa(request({ estado: "Libre", descripcion: "Patio" }), params(1));
+    expect(response.status).toBe(200);
+    expect(tx.mesa.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ sectorId: 4, estadoId: mesaLibre.id }) }));
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.pedido.count.mock.invocationCallOrder[0]);
+    expect(tx.pedido.count.mock.invocationCallOrder[0]).toBeLessThan(tx.sectorMesa.upsert.mock.invocationCallOrder[0]);
+    expect(tx.sectorMesa.upsert.mock.invocationCallOrder[0]).toBeLessThan(tx.mesa.update.mock.invocationCallOrder[0]);
+    expect(prismaMock.sectorMesa.upsert).not.toHaveBeenCalled();
   });
 
   it("no da de baja una mesa con pedidos activos", async () => {
