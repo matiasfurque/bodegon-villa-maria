@@ -114,6 +114,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     () => pedidos.filter((pedido) => pedido.estadoActivo ?? pedido.estado === "Activo"),
     [pedidos]
   );
+  const hayConsumosVigentes = pedidosEnCurso.some((pedido) => pedido.items.some((item) => !item.anulado));
   const consumoTotal = useMemo(
     () =>
       pedidosEnCurso
@@ -711,8 +712,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                   {(selectedMesa.estadoPermitePedido ?? selectedMesa.estado === "Ocupada") ? (
                     <button
                       className="btn"
-                      disabled={pedidosEnCurso.length > 0}
-                      title={pedidosEnCurso.length > 0 ? "Para liberar una mesa con pedidos activos, cerrá la cuenta." : undefined}
+                      disabled={hayConsumosVigentes}
+                      title={hayConsumosVigentes ? "Para liberar una mesa con consumos vigentes, cerrá la cuenta." : undefined}
                       onClick={() => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify({ estado: "Libre" }) }), "Mesa liberada")}
                     >
                       Liberar

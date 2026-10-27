@@ -31,11 +31,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (estado?.codigo === CODES.mesa.libre || estado?.codigo === CODES.mesa.cerrada) {
       const activePedidos = await tx.pedido.count({ where: { mesaId, estado: { esActivo: true } } });
       if (activePedidos > 0) {
-        return {
-          error: estado.codigo === CODES.mesa.libre
-            ? "No se puede liberar una mesa con pedidos activos. Cerrá la cuenta para dejarla libre."
-            : "No se puede dar de baja una mesa con pedidos activos. Cerrá la cuenta antes."
-        };
+        if (estado.codigo === CODES.mesa.cerrada) {
+          return { error: "No se puede dar de baja una mesa con pedidos activos. Cerrá la cuenta antes." };
+        }
+        const pedidosConConsumos = await tx.pedido.count({
+          where: { mesaId, estado: { esActivo: true }, items: { some: { estado: { esAnulado: false } } } }
+        });
+        if (pedidosConConsumos > 0) {
+          return { error: "No se puede liberar una mesa con pedidos activos. Cerrá la cuenta para dejarla libre." };
+        }
+        const anulado = await tx.pedidoEstado.findUniqueOrThrow({ where: { codigo: CODES.pedido.anulado } });
+        await tx.pedido.updateMany({
+          where: { mesaId, estado: { esActivo: true } },
+          data: { estadoId: anulado.id }
+        });
       }
     }
 
