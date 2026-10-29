@@ -5,20 +5,27 @@ import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, ChefHat, ChevronDown, Edit3, KeyRound, LogOut, Minus, Plus, Receipt, RefreshCcw, Save, Search, Table2, Trash2 } from "lucide-react";
 import { money } from "@/lib/money";
+import { readPendingAccountClose, savePendingAccountClose } from "@/modules/accounts/account-pending";
+import type { PendingAccountClose } from "@/modules/accounts/account-pending";
+import { readPendingOrderDraft, savePendingOrderDraft } from "@/modules/orders/order-draft";
+import type { OrderAttention, OrderDraftItem, PendingOrderCreation } from "@/modules/orders/order-draft";
 
 type Role = { id: number; nombre: string };
 type PermissionCode = "inicio.ver" | "operaciones.gestionar" | "cocina.gestionar" | "productos.gestionar" | "usuarios.gestionar" | "reportes.ver" | "historial.ver";
 type RolePermission = { permiso: { codigo: PermissionCode | string; nombre: string } };
 type AuthUser = { id: number; nombre: string; apellido: string; usuario: string; email?: string | null; role: { nombre: string; permisos: RolePermission[] } };
 type User = { id: number; nombre: string; apellido: string; usuario: string; email?: string | null; telefono?: string | null; estado: boolean; roleId?: number; role: Role };
-type Mesa = { id: number; numero: number; descripcion?: string | null; capacidad: number; estado: string; estadoCodigo?: string; estadoPermitePedido?: boolean; estadoLiberaMesa?: boolean; activa: boolean };
+type Mesa = { id: number; numero: number; descripcion?: string | null; capacidad: number; estado: string; estadoCodigo?: string; estadoPermitePedido?: boolean; estadoLiberaMesa?: boolean; activa: boolean; revision: number; atencionToken: string | null };
 type Categoria = { id: number; nombre: string; orden?: number | null; visible: boolean };
 type Producto = { id: number; nombre: string; descripcion?: string | null; precio: string; activo: boolean; visibleMenu: boolean; categoriaId: number; categoria: Categoria };
 type PedidoItem = { id: number; productoId: number; cantidad: number; precioUnitario: string; subtotal: string; observacion?: string | null; anulado: boolean; motivoAnulacion?: string | null; producto: Producto };
-type Pedido = { id: number; mesaId: number; estado: string; estadoCodigo?: string; estadoActivo?: boolean; estadoCocina: string; estadoCocinaCodigo?: string; estadoCocinaPermiteAgregarItems?: boolean; estadoCocinaVisible?: boolean; estadoCocinaNotificaMozo?: boolean; observacion?: string | null; fechaHora: string; mesa?: Mesa; usuario?: { nombre: string; apellido: string; usuario: string }; items: PedidoItem[] };
-type OrderDraftItem = { draftId: string; productoId: number; nombre: string; cantidad: number; precio: number; observacion: string };
+type Pedido = { id: number; mesaId: number; atencionToken: string | null; revisionContenido: number; estado: string; estadoCodigo?: string; estadoActivo?: boolean; estadoCocina: string; estadoCocinaCodigo?: string; estadoCocinaPermiteAgregarItems?: boolean; estadoCocinaVisible?: boolean; estadoCocinaNotificaMozo?: boolean; observacion?: string | null; fechaHora: string; mesa?: Mesa; usuario?: { nombre: string; apellido: string; usuario: string }; items: PedidoItem[] };
+
+function belongsToCurrentAttention(pedido: Pedido, mesa: Mesa | null | undefined) {
+  return Boolean(mesa?.atencionToken && pedido.atencionToken === mesa.atencionToken);
+}
 type PaymentMethod = string;
-type Cuenta = { id: number; fechaCierre: string; total: string; metodoPago: PaymentMethod; metodoPagoCodigo?: string; metodoPagoRequiereMontoRecibido?: boolean; montoRecibido: string; vuelto: string; detalleJson: string; mesa: Mesa; usuarioCierre: { nombre: string; apellido: string; usuario: string } };
+type Cuenta = { id: number; atencionToken?: string | null; fechaCierre: string; total: string; metodoPago: PaymentMethod; metodoPagoCodigo?: string; metodoPagoRequiereMontoRecibido?: boolean; montoRecibido: string; vuelto: string; detalleJson: string; mesa: Mesa; usuarioCierre: { nombre: string; apellido: string; usuario: string } };
 type CuentaDetalleItem = { id: number; pedidoId: number; producto: string; cantidad: number; precioUnitario: number; subtotal: number; observacion?: string | null };
 type Report = { from: string; to: string; totalDia: number; totalPeriodo: number; cuentasHoy: number; cuentasPeriodo: number; mesasOcupadas: number; mesasAtendidasHoy: number; mesasAtendidasPeriodo: number; pedidosAnulados: number; cobrosPorMetodo: Array<{ metodo: string; cantidad: number; total: number }>; productosMasVendidos: Array<{ producto: string; cantidad: number; total: number }> };
 type ConfirmAction = { title: string; message: string; confirmLabel: string; onConfirm: () => Promise<void> };
@@ -38,13 +45,19 @@ const tabs: Array<{ label: string; permiso: PermissionCode }> = [
 ];
 const emptyCatalogs: Catalogs = { metodosPago: [], cocinaEstados: [] };
 
+class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+  }
+}
+
 async function api(path: string, options?: RequestInit) {
   const response = await fetch(path, {
     ...options,
     headers: { "Content-Type": "application/json", ...(options?.headers || {}) }
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Operacion rechazada");
+  if (!response.ok) throw new ApiError(data.error || "Operacion rechazada", response.status);
   return data;
 }
 
@@ -95,11 +108,17 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const [historyTo, setHistoryTo] = useState("");
   const [reportFrom, setReportFrom] = useState("");
   const [reportTo, setReportTo] = useState("");
-  const [showCloseAccount, setShowCloseAccount] = useState(false);
+  const [closeAttention, setCloseAttention] = useState<Omit<PendingAccountClose, "payment"> | null>(null);
+  const [pendingClose, setPendingClose] = useState<PendingAccountClose | null>(null);
+  const [verifyingClose, setVerifyingClose] = useState(false);
+  const [closeError, setCloseError] = useState("");
+  const [closeConflict, setCloseConflict] = useState(false);
+  const [closingAccount, setClosingAccount] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingReport, setRefreshingReport] = useState(false);
   const [message, setMessage] = useState("");
+  const [reviewedKitchenRevisions, setReviewedKitchenRevisions] = useState<Record<number, number>>({});
   const activeRef = useRef(active);
   const selectedMesaIdRef = useRef(selectedMesaId);
   const autoRefreshRunningRef = useRef(false);
@@ -111,9 +130,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     [mesas]
   );
   const pedidosEnCurso = useMemo(
-    () => pedidos.filter((pedido) => pedido.estadoActivo ?? pedido.estado === "Activo"),
-    [pedidos]
+    () => pedidos.filter((pedido) => belongsToCurrentAttention(pedido, selectedMesa) &&
+      (pedido.estadoActivo ?? pedido.estado === "Activo")),
+    [pedidos, selectedMesa]
   );
+  const hayConsumosVigentes = pedidosEnCurso.some((pedido) => pedido.items.some((item) => !item.anulado));
   const consumoTotal = useMemo(
     () =>
       pedidosEnCurso
@@ -187,7 +208,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     });
   }, [userRoleFilter, userSearch, userStatusFilter, users]);
   const activePedidosResumen = useMemo(() => {
-    const activePedidos = allPedidos.filter((pedido) => pedido.estadoActivo ?? pedido.estado === "Activo");
+    const activePedidos = allPedidos.filter((pedido) => belongsToCurrentAttention(pedido,
+      mesas.find((mesa) => mesa.id === pedido.mesaId)) && (pedido.estadoActivo ?? pedido.estado === "Activo"));
     const byMesa = new Map<number, { mesa: Mesa | null; pedidos: number; items: number; total: number; listos: number }>();
 
     for (const pedido of activePedidos) {
@@ -215,6 +237,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   );
   const kitchenOrders = useMemo(() => {
     const activeOrders = allPedidos
+      .filter((pedido) => belongsToCurrentAttention(pedido, mesas.find((mesa) => mesa.id === pedido.mesaId)))
       .filter((pedido) => pedido.estadoActivo ?? pedido.estado === "Activo")
       .filter((pedido) => pedido.items.some((item) => !item.anulado));
     const visibleOrders = kitchenStatusFilter === "Activas"
@@ -222,7 +245,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       : activeOrders.filter((pedido) => pedido.estadoCocina === kitchenStatusFilter);
 
     return visibleOrders.sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime());
-  }, [allPedidos, kitchenStatusFilter]);
+  }, [allPedidos, kitchenStatusFilter, mesas]);
   const dashboardStats = useMemo(() => {
     const mesasActivas = mesas.filter((mesa) => mesa.activa);
     const mesasOcupadas = mesasActivas.filter((mesa) => mesa.estadoPermitePedido ?? mesa.estado === "Ocupada").length;
@@ -355,6 +378,34 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }, []);
 
   useEffect(() => {
+    setReviewedKitchenRevisions((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const pedido of allPedidos) {
+        if (next[pedido.id] === undefined) {
+          next[pedido.id] = pedido.revisionContenido;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [allPedidos]);
+
+  useEffect(() => {
+    if (!canManageOperaciones) return;
+    try {
+      const restored = readPendingAccountClose(window.sessionStorage.getItem(`bvm-pending-account-close:${user.id}`));
+      if (restored) {
+        setPendingClose(restored);
+        setCloseAttention(restored);
+        setCloseError("El resultado del cobro sigue sin confirmar. Verificá antes de realizar otro cierre.");
+      }
+    } catch {
+      setMessage("No se pudo leer el cobro pendiente de esta pestaña. Revisá el almacenamiento del navegador.");
+    }
+  }, [canManageOperaciones, user.id]);
+
+  useEffect(() => {
     activeRef.current = active;
   }, [active]);
 
@@ -363,8 +414,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }, [selectedMesaId]);
 
   useEffect(() => {
-    modalOpenRef.current = Boolean(showCloseAccount || showSecurity || confirmAction);
-  }, [confirmAction, showCloseAccount, showSecurity]);
+    modalOpenRef.current = Boolean(closeAttention || showSecurity || confirmAction);
+  }, [confirmAction, closeAttention, showSecurity]);
 
   useEffect(() => {
     const interval = window.setInterval(async () => {
@@ -392,15 +443,21 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     }
   }, [active, visibleTabs]);
 
-  async function run(action: () => Promise<unknown>, ok = "Operacion realizada") {
+  async function run<T>(action: () => Promise<T>, ok = "Operacion realizada"): Promise<{ ok: true; value: T } | { ok: false }> {
     try {
       actionRunningRef.current = true;
       setMessage("");
-      await action();
-      setMessage(ok);
-      await loadAll();
+      const value = await action();
+      try {
+        await loadAll();
+        setMessage(ok);
+      } catch {
+        setMessage(`${ok}. No se pudo actualizar la vista; presioná Actualizar.`);
+      }
+      return { ok: true, value };
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Error inesperado");
+      return { ok: false };
     } finally {
       actionRunningRef.current = false;
     }
@@ -412,39 +469,94 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     setPedidos(await api(`/api/pedidos?mesaId=${id}`));
   }
 
-  async function addProductToMesa(body: Record<string, unknown>) {
-    if (!selectedMesa) throw new Error("Selecciona una mesa");
+  async function addProductToMesa(body: Record<string, unknown>, observed: OrderAttention,
+    onOccupied: (attention: OrderAttention) => void, onItemAdded: (draftId: string) => void,
+    onItemSending: (draftId: string, pedidoId: number) => void,
+    onCreating: (creation: PendingOrderCreation) => void,
+    onCreationConflict: () => void) {
+    if (!selectedMesa || selectedMesa.id !== observed.mesaId) throw new Error("Selecciona la mesa del borrador");
     const items = Array.isArray(body.items) ? body.items : [];
+    const pendingCreation = body.pendingCreation as PendingOrderCreation | null;
+    if (pendingCreation) {
+      try {
+        await api("/api/pedidos", { method: "POST", body: JSON.stringify(pendingCreation) });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 409) onCreationConflict();
+        throw error;
+      }
+      return;
+    }
     if (items.length === 0 || items.some((item) => !(item as { productoId?: unknown }).productoId)) {
       throw new Error("Selecciona al menos un producto");
     }
 
-    if (!(selectedMesa.estadoPermitePedido ?? selectedMesa.estado === "Ocupada")) {
-      await api(`/api/mesas/${selectedMesa.id}`, {
+    let atencionToken = observed.atencionToken;
+    if (!observed.occupied) {
+      const occupiedMesa: Mesa = await api(`/api/mesas/${observed.mesaId}`, {
         method: "PATCH",
-        body: JSON.stringify({ estado: "Ocupada" })
+        body: JSON.stringify({ estado: "Ocupada", revisionEsperada: observed.revision, atencionTokenEsperado: observed.atencionToken })
       });
+      atencionToken = occupiedMesa.atencionToken;
+      setMesas((current) => current.map((mesa) => mesa.id === occupiedMesa.id ? occupiedMesa : mesa));
+      onOccupied({ mesaId: observed.mesaId, revision: occupiedMesa.revision, atencionToken, occupied: true });
     }
+    if (!atencionToken) throw new Error("Esta mesa no tiene una atención identificada. Actualizá los datos.");
 
-    const activePedido = pedidos.find((pedido) => (pedido.estadoActivo ?? pedido.estado === "Activo") && (pedido.estadoCocinaPermiteAgregarItems ?? ["Pendiente", "En preparacion"].includes(pedido.estadoCocina)));
-    if (activePedido) {
-      for (const item of items) {
-        await api(`/api/pedidos/${activePedido.id}/items`, {
+    const activePedido = pedidos.find((pedido) => pedido.atencionToken === atencionToken &&
+      (pedido.estadoActivo ?? pedido.estado === "Activo") &&
+      (pedido.estadoCocinaPermiteAgregarItems ?? ["Pendiente", "En preparacion"].includes(pedido.estadoCocina)));
+    for (const item of items) {
+      const draftItem = item as Record<string, unknown>;
+      const targetPedidoId = typeof draftItem.targetPedidoId === "number" ? draftItem.targetPedidoId : activePedido?.id;
+      if (targetPedidoId) {
+        const { draftId } = draftItem;
+        if (typeof draftId === "string") onItemSending(draftId, targetPedidoId);
+        await api(`/api/pedidos/${targetPedidoId}/items`, {
           method: "POST",
-          body: JSON.stringify(item)
+          body: JSON.stringify({ productoId: draftItem.productoId, cantidad: draftItem.cantidad,
+            observacion: draftItem.observacion, solicitudId: draftItem.solicitudId, atencionToken })
         });
+        if (typeof draftId === "string") onItemAdded(draftId);
       }
-      return;
     }
 
-    await api("/api/pedidos", {
-      method: "POST",
-      body: JSON.stringify({ ...body, mesaId: selectedMesa.id })
+    const newOrderItems = items.filter((item) => {
+      const draftItem = item as Record<string, unknown>;
+      return typeof draftItem.targetPedidoId !== "number" && !activePedido;
     });
+    if (newOrderItems.length === 0) return;
+
+    const creation: PendingOrderCreation = {
+      solicitudId: crypto.randomUUID(),
+      mesaId: observed.mesaId,
+      atencionToken,
+      observacion: typeof body.observacion === "string" ? body.observacion : null,
+      items: newOrderItems.map((item) => {
+        const draftItem = item as Record<string, unknown>;
+        return { productoId: Number(draftItem.productoId), cantidad: Number(draftItem.cantidad),
+          observacion: String(draftItem.observacion || "") };
+      })
+    };
+    onCreating(creation);
+    try {
+      await api("/api/pedidos", { method: "POST", body: JSON.stringify(creation) });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) onCreationConflict();
+      throw error;
+    }
   }
 
   function openCloseAccountDialog() {
+    if (pendingClose) {
+      setCloseAttention(pendingClose);
+      setCloseError("El resultado del cobro sigue sin confirmar. Verificá antes de realizar otro cierre.");
+      return;
+    }
     if (!selectedMesa) return;
+    if (!selectedMesa.atencionToken) {
+      setMessage("La mesa no tiene una atención activa. Actualizá antes de cerrar la cuenta.");
+      return;
+    }
     if (consumoTotal <= 0) {
       setMessage("No hay consumos para cerrar en esta mesa");
       return;
@@ -454,18 +566,115 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
       setMessage(`No se puede cerrar todavía: hay pedidos sin entregar (${estados}).`);
       return;
     }
-    setShowCloseAccount(true);
+    setCloseError("");
+    setCloseConflict(false);
+    setCloseAttention({ mesa: {
+      id: selectedMesa.id, numero: selectedMesa.numero, descripcion: selectedMesa.descripcion,
+      estado: selectedMesa.estado, atencionToken: selectedMesa.atencionToken
+    }, items: cuentaDetalle, total: consumoTotal });
+  }
+
+  async function confirmCloseAccount(payment: { metodoPago: PaymentMethod; montoRecibido: number }) {
+    if (!closeAttention || pendingClose || actionRunningRef.current) return;
+    const snapshot: PendingAccountClose = { ...closeAttention,
+      mesa: { id: closeAttention.mesa.id, numero: closeAttention.mesa.numero,
+        descripcion: closeAttention.mesa.descripcion, estado: closeAttention.mesa.estado,
+        atencionToken: closeAttention.mesa.atencionToken }, payment };
+    try {
+      savePendingAccountClose(window.sessionStorage, `bvm-pending-account-close:${user.id}`, snapshot);
+    } catch {
+      setCloseError("No se pudo guardar el cobro pendiente en esta pestaña. No se envió el cierre.");
+      return;
+    }
+    setPendingClose(snapshot);
+    try {
+      actionRunningRef.current = true;
+      setClosingAccount(true);
+      setCloseError("");
+      setCloseConflict(false);
+      setMessage("");
+      const cuenta = await api("/api/cuentas", {
+        method: "POST",
+        body: JSON.stringify({ mesaId: snapshot.mesa.id, atencionToken: snapshot.mesa.atencionToken, ...payment })
+      });
+      savePendingAccountClose(window.sessionStorage, `bvm-pending-account-close:${user.id}`, null);
+      setPendingClose(null);
+      setCloseAttention(null);
+      try {
+        await loadAll();
+        setMessage(`Cuenta #${cuenta.id} cerrada por ${money(cuenta.total)}.`);
+      } catch {
+        setMessage("Cuenta cerrada. No se pudo actualizar la vista; presioná Actualizar.");
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 400) {
+        savePendingAccountClose(window.sessionStorage, `bvm-pending-account-close:${user.id}`, null);
+        setPendingClose(null);
+        setCloseError(error.message);
+      } else {
+        setCloseError("No se pudo confirmar el resultado del cobro. No vuelvas a cobrar; verificá el resultado de esta atención.");
+        setCloseConflict(false);
+      }
+    } finally {
+      setClosingAccount(false);
+      actionRunningRef.current = false;
+    }
+  }
+
+  async function verifyCloseResult() {
+    if (!pendingClose || actionRunningRef.current) return;
+    actionRunningRef.current = true;
+    setVerifyingClose(true);
+    setCloseError("");
+    try {
+      const result: { confirmado: boolean; mensaje?: string; cuenta?: { id: number; total: number; mesaNumero: number } } =
+        await api(`/api/cuentas/resultado?atencionToken=${encodeURIComponent(pendingClose.mesa.atencionToken)}`);
+      if (!result.confirmado || !result.cuenta) {
+        setCloseError(result.mensaje || "No se encontró un cierre confirmado todavía. Verificá nuevamente antes de tomar otra decisión.");
+        return;
+      }
+      savePendingAccountClose(window.sessionStorage, `bvm-pending-account-close:${user.id}`, null);
+      setPendingClose(null);
+      setCloseAttention(null);
+      try {
+        await loadAll();
+        setMessage(`Cierre confirmado: Cuenta #${result.cuenta.id}, Mesa ${result.cuenta.mesaNumero}, ${money(result.cuenta.total)}.`);
+      } catch {
+        setMessage(`Cierre confirmado: Cuenta #${result.cuenta.id} por ${money(result.cuenta.total)}. No se pudo actualizar la vista; presioná Actualizar.`);
+      }
+    } catch {
+      setCloseError("La consulta falló y el resultado sigue sin confirmar. Conservamos los datos; verificá nuevamente más tarde.");
+    } finally {
+      setVerifyingClose(false);
+      actionRunningRef.current = false;
+    }
   }
 
   function confirmDanger(action: ConfirmAction) {
     setConfirmAction(action);
   }
 
-  async function updateKitchenStatus(pedidoId: number, estadoCocina: string, estadoCocinaEsperado: string) {
-    await run(
-      () => api(`/api/pedidos/${pedidoId}`, { method: "PATCH", body: JSON.stringify({ estadoCocina, estadoCocinaEsperado }) }),
-      "Pedido actualizado"
-    );
+  async function updateKitchenStatus(pedidoId: number, estadoCocina: string, estadoCocinaEsperado: string,
+    atencionToken: string | null, revisionContenidoEsperada?: number) {
+    try {
+      actionRunningRef.current = true;
+      setMessage("");
+      await api(`/api/pedidos/${pedidoId}`, { method: "PATCH",
+        body: JSON.stringify({ estadoCocina, estadoCocinaEsperado, atencionToken, revisionContenidoEsperada }) });
+      try {
+        await loadOperationalData();
+        setMessage("Pedido actualizado");
+      } catch {
+        setMessage("Pedido actualizado. No se pudo actualizar la vista; presioná Actualizar.");
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        await loadOperationalData().catch(() => {});
+      }
+      setMessage(error instanceof Error ? error.message : "No se pudo actualizar el pedido");
+    } finally {
+      actionRunningRef.current = false;
+    }
   }
 
   async function runConfirmedAction() {
@@ -546,6 +755,21 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
         ))}
       </div>
       {message && <p className={isErrorMessage(message) ? "error" : "notice"}>{message}</p>}
+      {pendingClose && canManageOperaciones && (
+        <div className="panel pending-close-notice" role="status">
+          <div>
+            <strong>Cobro pendiente de verificación · Mesa {pendingClose.mesa.numero}</strong>
+            <p>Atención original: {pendingClose.mesa.atencionToken}. No vuelvas a cobrar hasta confirmar el resultado.</p>
+            {closeError && !closeAttention && <p>{closeError}</p>}
+          </div>
+          <div className="actions">
+            <button className="btn primary" type="button" disabled={verifyingClose || closingAccount} onClick={verifyCloseResult}>
+              {verifyingClose ? "Verificando..." : "Verificar resultado del cobro"}
+            </button>
+            {!closeAttention && <button className="btn" type="button" onClick={() => setCloseAttention(pendingClose)}>Ver detalles</button>}
+          </div>
+        </div>
+      )}
 
       {active === "Inicio" && canViewInicio && (
         <section className="dashboard-home">
@@ -667,7 +891,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                 nextMesaNumber={nextMesaNumber}
                 onSubmit={(body) =>
                   run(async () => {
-                    const mesa = await api("/api/mesas", { method: "POST", body: JSON.stringify(body) });
+                    const existing = mesas.find((candidate) => candidate.numero === Number(body.numero));
+                    const mesa = await api("/api/mesas", { method: "POST", body: JSON.stringify({
+                      ...body,
+                      ...(existing ? { revisionEsperada: existing.revision, atencionTokenEsperado: existing.atencionToken } : {})
+                    }) });
                     setSelectedMesaId(mesa.id);
                     setPedidos([]);
                   }, "Mesa creada")
@@ -711,14 +939,14 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                   {(selectedMesa.estadoPermitePedido ?? selectedMesa.estado === "Ocupada") ? (
                     <button
                       className="btn"
-                      disabled={pedidosEnCurso.length > 0}
-                      title={pedidosEnCurso.length > 0 ? "Para liberar una mesa con pedidos activos, cerrá la cuenta." : undefined}
-                      onClick={() => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify({ estado: "Libre" }) }), "Mesa liberada")}
+                      disabled={hayConsumosVigentes}
+                      title={hayConsumosVigentes ? "Para liberar una mesa con consumos vigentes, cerrá la cuenta." : undefined}
+                      onClick={() => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify({ estado: "Libre", revisionEsperada: selectedMesa.revision, atencionTokenEsperado: selectedMesa.atencionToken }) }), "Mesa liberada")}
                     >
                       Liberar
                     </button>
                   ) : (
-                    <button className="btn" onClick={() => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify({ estado: "Ocupada" }) }), "Mesa ocupada")}>
+                    <button className="btn" onClick={() => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify({ estado: "Ocupada", revisionEsperada: selectedMesa.revision, atencionTokenEsperado: selectedMesa.atencionToken }) }), "Mesa ocupada")}>
                       Ocupar
                     </button>
                   )}
@@ -734,7 +962,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                     title: `Dar de baja Mesa ${selectedMesa.numero}`,
                     message: "La mesa va a dejar de estar disponible para nuevas operaciones. Si tiene consumos activos, revisalos antes de continuar.",
                     confirmLabel: "Mesa dada de baja",
-                    onConfirm: () => api(`/api/mesas/${selectedMesa.id}`, { method: "DELETE" })
+                    onConfirm: () => api(`/api/mesas/${selectedMesa.id}`, { method: "DELETE", body: JSON.stringify({ revisionEsperada: selectedMesa.revision, atencionTokenEsperado: selectedMesa.atencionToken }) })
                   })}>
                     <Trash2 size={17} /> Baja
                   </button>
@@ -745,10 +973,10 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                   </p>
                 )}
                 <CollapsibleSection title="Editar mesa">
-                  <MesaEditForm mesa={selectedMesa} onSubmit={(body) => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify(body) }), "Mesa modificada")} />
+                  <MesaEditForm key={selectedMesa.id} mesa={selectedMesa} onSubmit={(body) => run(() => api(`/api/mesas/${selectedMesa.id}`, { method: "PATCH", body: JSON.stringify(body) }), "Mesa modificada")} />
                 </CollapsibleSection>
                 <CollapsibleSection title="Agregar productos al consumo" defaultOpen>
-                  <OrderForm productos={productos.filter((p) => p.activo)} onSubmit={(body) => run(() => addProductToMesa(body), "Producto agregado al consumo")} />
+                  <OrderForm key={selectedMesa.id} mesa={selectedMesa} storageKey={`bvm-order-draft:${user.id}:${selectedMesa.id}`} productos={productos.filter((p) => p.activo)} onSubmit={(body, observed, onOccupied, onItemAdded, onItemSending, onCreating, onCreationConflict) => run(() => addProductToMesa(body, observed, onOccupied, onItemAdded, onItemSending, onCreating, onCreationConflict), "Producto agregado al consumo").then((result) => result.ok)} />
                 </CollapsibleSection>
                 <h3>Consumo actual: {money(consumoTotal)}</h3>
                   <PedidoList pedidos={pedidosEnCurso} confirmDanger={confirmDanger} onKitchenStatusChange={updateKitchenStatus} />
@@ -786,6 +1014,9 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                 const totalItems = activeItems.reduce((sum, item) => sum + item.cantidad, 0);
                 const currentIndex = catalogs.cocinaEstados.findIndex((estado) => estado.nombre === pedido.estadoCocina);
                 const nextStatus = catalogs.cocinaEstados[Math.min(Math.max(currentIndex, 0) + 1, Math.max(catalogs.cocinaEstados.length - 1, 0))];
+                const reviewedRevision = reviewedKitchenRevisions[pedido.id];
+                const needsReview = reviewedRevision !== undefined && reviewedRevision !== pedido.revisionContenido;
+                const readyBlocked = reviewedRevision === undefined || needsReview;
 
                 return (
                   <article className="kitchen-ticket" key={pedido.id}>
@@ -799,6 +1030,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                     </div>
 
                     <div className="kitchen-items">
+                      {pedido.observacion && <p className="muted">Nota del pedido: {pedido.observacion}</p>}
                       {activeItems.map((item) => (
                         <div className="kitchen-item" key={item.id}>
                           <strong>{item.cantidad} x {item.producto.nombre}</strong>
@@ -807,14 +1039,25 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                       ))}
                     </div>
 
+                    {needsReview && (
+                      <div className="kitchen-content-alert" role="alert">
+                        <strong>El contenido de este pedido cambió.</strong>
+                        <span>Revisá los productos y sus observaciones antes de marcarlo como listo.</span>
+                        <div className="actions">
+                          <button className="btn" type="button" onClick={() => loadOperationalData().catch(() => setMessage("No se pudo actualizar el pedido"))}>Actualizar pedido</button>
+                          <button className="btn primary" type="button" onClick={() => setReviewedKitchenRevisions((current) => ({ ...current, [pedido.id]: pedido.revisionContenido }))}>Ya revisé los cambios</button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="kitchen-actions">
                       {catalogs.cocinaEstados.map((estado) => (
                         <button
                           className={`btn ${pedido.estadoCocina === estado.nombre ? "primary" : ""}`}
-                          disabled={pedido.estadoCocina === estado.nombre}
+                          disabled={pedido.estadoCocina === estado.nombre || (estado.nombre === "Listo" && readyBlocked)}
                           key={estado.codigo}
                           type="button"
-                          onClick={() => updateKitchenStatus(pedido.id, estado.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina)}
+                          onClick={() => updateKitchenStatus(pedido.id, estado.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken, estado.nombre === "Listo" ? reviewedRevision : undefined)}
                         >
                           {estado.nombre}
                         </button>
@@ -822,7 +1065,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                     </div>
 
                     {nextStatus && pedido.estadoCocina !== nextStatus.nombre && nextStatus.visibleCocina && (
-                      <button className="btn primary kitchen-next" type="button" onClick={() => updateKitchenStatus(pedido.id, nextStatus.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina)}>
+                      <button className="btn primary kitchen-next" type="button" disabled={nextStatus.nombre === "Listo" && readyBlocked} onClick={() => updateKitchenStatus(pedido.id, nextStatus.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken, nextStatus.nombre === "Listo" ? reviewedRevision : undefined)}>
                         Pasar a {nextStatus.nombre}
                       </button>
                     )}
@@ -1181,19 +1424,21 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
           </table>
         </section>
       )}
-      {showCloseAccount && selectedMesa && (
+      {closeAttention && (
         <CloseAccountDialog
-          mesa={selectedMesa}
-          items={cuentaDetalle}
-          total={consumoTotal}
+          mesa={closeAttention.mesa}
+          items={closeAttention.items}
+          total={closeAttention.total}
+          initialPayment={pendingClose?.payment}
+          pending={Boolean(pendingClose)}
+          verifying={verifyingClose}
+          onVerify={verifyCloseResult}
           metodosPago={catalogs.metodosPago}
-          onCancel={() => setShowCloseAccount(false)}
-          onConfirm={(payment) =>
-            run(async () => {
-              await api("/api/cuentas", { method: "POST", body: JSON.stringify({ mesaId: selectedMesa.id, ...payment }) });
-              setShowCloseAccount(false);
-            }, "Cuenta cerrada")
-          }
+          error={closeError}
+          conflict={closeConflict}
+          submitting={closingAccount}
+          onCancel={() => setCloseAttention(null)}
+          onConfirm={confirmCloseAccount}
         />
       )}
       {selectedCuenta && <HistoryDetailDialog cuenta={selectedCuenta} onClose={() => setSelectedCuenta(null)} />}
@@ -1279,14 +1524,27 @@ function MesaCreateForm({ nextMesaNumber, onSubmit }: { nextMesaNumber: number; 
   );
 }
 
-function MesaEditForm({ mesa, onSubmit }: { mesa: Mesa; onSubmit: (body: Record<string, unknown>) => void }) {
+function MesaEditForm({ mesa, onSubmit }: { mesa: Mesa; onSubmit: (body: Record<string, unknown>) => Promise<{ ok: true; value: Mesa } | { ok: false }> }) {
   const [body, setBody] = useState({ numero: mesa.numero, capacidad: mesa.capacidad, descripcion: mesa.descripcion || "" });
-  useEffect(() => {
-    setBody({ numero: mesa.numero, capacidad: mesa.capacidad, descripcion: mesa.descripcion || "" });
-  }, [mesa]);
+  const [observed, setObserved] = useState({ revisionEsperada: mesa.revision, atencionTokenEsperado: mesa.atencionToken });
+  const newerVersion = mesa.revision > observed.revisionEsperada ||
+    (mesa.revision === observed.revisionEsperada && observed.atencionTokenEsperado !== mesa.atencionToken);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const result = await onSubmit({ ...body, ...observed });
+    if (result.ok) setObserved({ revisionEsperada: result.value.revision, atencionTokenEsperado: result.value.atencionToken });
+  }
 
   return (
-    <form className="form-grid" onSubmit={(event) => { event.preventDefault(); onSubmit(body); }}>
+    <form className="form-grid" onSubmit={submit}>
+      {newerVersion && <div className="field wide">
+        <span>La mesa cambió mientras la editabas. Revisá la información antes de guardar.</span>
+        <button type="button" className="btn" onClick={() => {
+          setBody({ numero: mesa.numero, capacidad: mesa.capacidad, descripcion: mesa.descripcion || "" });
+          setObserved({ revisionEsperada: mesa.revision, atencionTokenEsperado: mesa.atencionToken });
+        }}>Cargar datos actuales</button>
+      </div>}
       <Field label="Numero" type="number" value={body.numero} onChange={(numero) => setBody({ ...body, numero: Number(numero) })} />
       <Field label="Capacidad" type="number" value={body.capacidad} onChange={(capacidad) => setBody({ ...body, capacidad: Number(capacidad) })} />
       <Field label="Descripcion" value={body.descripcion} onChange={(descripcion) => setBody({ ...body, descripcion })} wide />
@@ -1432,13 +1690,64 @@ function UserForm({ roles, user, onCancel, onSubmit }: { roles: Role[]; user: Us
   );
 }
 
-function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (body: Record<string, unknown>) => Promise<void> | void }) {
+function OrderForm({ mesa, productos, storageKey, onSubmit }: {
+  mesa: Mesa;
+  productos: Producto[];
+  storageKey: string;
+  onSubmit: (body: Record<string, unknown>, observed: OrderAttention,
+    onOccupied: (attention: OrderAttention) => void, onItemAdded: (draftId: string) => void,
+    onItemSending: (draftId: string, pedidoId: number) => void,
+    onCreating: (creation: PendingOrderCreation) => void,
+    onCreationConflict: () => void) => Promise<boolean> | boolean;
+}) {
   const [productoId, setProductoId] = useState(productos[0]?.id || 0);
   const [cantidad, setCantidad] = useState(1);
   const [categoriaId, setCategoriaId] = useState("todas");
   const [query, setQuery] = useState("");
   const [observacion, setObservacion] = useState("");
   const [draftItems, setDraftItems] = useState<OrderDraftItem[]>([]);
+  const [draftAttention, setDraftAttention] = useState<OrderAttention | null>(null);
+  const [pendingCreation, setPendingCreation] = useState<PendingOrderCreation | null>(null);
+  const [creationConflict, setCreationConflict] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftStorageError, setDraftStorageError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const restored = readPendingOrderDraft(window.sessionStorage.getItem(storageKey), mesa.id);
+      if (restored) {
+        setDraftItems(restored.items);
+        setDraftAttention(restored.attention);
+        setPendingCreation(restored.creation);
+      }
+    } catch {
+      setDraftStorageError(true);
+    } finally {
+      setDraftRestored(true);
+    }
+  }, [mesa.id, storageKey]);
+
+  useEffect(() => {
+    if (!draftRestored) return;
+    try {
+      savePendingOrderDraft(window.sessionStorage, storageKey, draftAttention, draftItems, pendingCreation);
+      setDraftStorageError(false);
+    } catch {
+      setDraftStorageError(true);
+    }
+  }, [draftAttention, draftItems, draftRestored, pendingCreation, storageKey]);
+
+  function persistDraft(attention: OrderAttention | null, items: OrderDraftItem[], creation: PendingOrderCreation | null) {
+    try {
+      savePendingOrderDraft(window.sessionStorage, storageKey, attention, items, creation);
+      setDraftStorageError(false);
+    } catch {
+      setDraftStorageError(true);
+      throw new Error("No se pudo conservar el borrador en esta pestaña. Revisá el estado antes de reintentar.");
+    }
+  }
   const categorias = useMemo(() => {
     const map = new Map<number, Categoria>();
     productos.forEach((producto) => map.set(producto.categoria.id, producto.categoria));
@@ -1467,11 +1776,20 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
   }, [productoId, productos, selectedProduct]);
 
   function addDraftItem() {
-    if (!selectedProduct) return;
+    if (!draftRestored || submittingRef.current || pendingCreation || !selectedProduct) return;
+    if (!draftAttention) setDraftAttention({
+      mesaId: mesa.id,
+      revision: mesa.revision,
+      atencionToken: mesa.atencionToken,
+      occupied: mesa.estadoPermitePedido ?? mesa.estado === "Ocupada"
+    });
+    const solicitudId = crypto.randomUUID();
     setDraftItems((current) => [
       ...current,
       {
-        draftId: `${selectedProduct.id}-${Date.now()}-${current.length}`,
+        draftId: solicitudId,
+        solicitudId,
+        targetPedidoId: null,
         productoId: selectedProduct.id,
         nombre: selectedProduct.nombre,
         cantidad: safeCantidad,
@@ -1484,29 +1802,92 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
   }
 
   function removeDraftItem(draftId: string) {
+    if (submittingRef.current || pendingCreation) return;
     setDraftItems((current) => current.filter((item) => item.draftId !== draftId));
+    if (draftItems.length === 1) setDraftAttention(null);
   }
 
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (draftItems.length === 0) {
+    if (!draftRestored || submittingRef.current) return;
+    if (draftItems.length === 0 && !pendingCreation) {
       addDraftItem();
       return;
     }
-    await onSubmit({
-      items: draftItems.map((item) => ({
-        productoId: item.productoId,
-        cantidad: item.cantidad,
-        observacion: item.observacion
-      }))
-    });
-    setDraftItems([]);
-    setCantidad(1);
-    setObservacion("");
+    if (!draftAttention) return;
+    let pendingItems = draftItems.map((item) => ({ ...item }));
+    let attention = draftAttention;
+    let creation = pendingCreation;
+    try {
+      persistDraft(attention, pendingItems, creation);
+    } catch {
+      return;
+    }
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      const saved = await onSubmit({ items: pendingItems, pendingCreation: creation }, draftAttention, (nextAttention) => {
+        attention = nextAttention;
+        setDraftAttention(nextAttention);
+        persistDraft(attention, pendingItems, creation);
+      }, (draftId) => {
+        pendingItems = pendingItems.filter((item) => item.draftId !== draftId);
+        setDraftItems(pendingItems);
+        persistDraft(attention, pendingItems, creation);
+      }, (draftId, pedidoId) => {
+        pendingItems = pendingItems.map((item) => item.draftId === draftId ? { ...item, targetPedidoId: pedidoId } : item);
+        setDraftItems(pendingItems);
+        persistDraft(attention, pendingItems, creation);
+      }, (nextCreation) => {
+        creation = nextCreation;
+        setPendingCreation(nextCreation);
+        persistDraft(attention, pendingItems, creation);
+      }, () => {
+        setCreationConflict(true);
+      });
+      if (!saved) return;
+      setDraftItems([]);
+      setDraftAttention(null);
+      setPendingCreation(null);
+      setCreationConflict(false);
+      persistDraft(null, [], null);
+      setCantidad(1);
+      setObservacion("");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   }
 
+  const attentionChanged = Boolean(draftAttention && (
+    draftAttention.occupied
+      ? mesa.atencionToken !== draftAttention.atencionToken
+      : mesa.revision !== draftAttention.revision || (mesa.estadoPermitePedido ?? mesa.estado === "Ocupada")
+  ));
+
   return (
-    <form className="form-grid" onSubmit={submitOrder}>
+    <form className="form-grid" onFocusCapture={() => {
+      if (!draftRestored) return;
+      if (!draftAttention) setDraftAttention({
+        mesaId: mesa.id,
+        revision: mesa.revision,
+        atencionToken: mesa.atencionToken,
+        occupied: mesa.estadoPermitePedido ?? mesa.estado === "Ocupada"
+      });
+    }} onSubmit={submitOrder}>
+      {attentionChanged && <p className="error wide">La atención cambió mientras preparabas el pedido. Este borrador no se enviará a la atención nueva.</p>}
+      {pendingCreation && <p className="muted wide">Pedido pendiente de confirmación. Reenviá para recuperar el resultado antes de modificar este borrador.</p>}
+      {pendingCreation && creationConflict && <button className="btn wide" type="button" disabled={submitting} onClick={() => {
+        if (!window.confirm("Revisá primero si el pedido aparece en la mesa. ¿Querés descartar la solicitud pendiente y conservar los productos para revisarlos?")) return;
+        try {
+          persistDraft(draftAttention, draftItems, null);
+        } catch {
+          return;
+        }
+        setPendingCreation(null);
+        setCreationConflict(false);
+      }}>Descartar solicitud en conflicto</button>}
+      {draftStorageError && <p className="error wide">El navegador no permitió guardar el borrador en esta pestaña. Revisá su configuración antes de enviar.</p>}
       <label className="field wide search-field">
         Buscar producto
         <span>
@@ -1560,7 +1941,7 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
         <span>{selectedProduct ? `${safeCantidad} x ${selectedProduct.nombre}` : "Sin producto seleccionado"}</span>
         <strong>{selectedProduct ? money(Number(selectedProduct.precio) * safeCantidad) : money(0)}</strong>
       </div>
-      <button className="btn wide" type="button" disabled={!selectedProduct || productos.length === 0} onClick={addDraftItem}>
+      <button className="btn wide" type="button" disabled={!draftRestored || submitting || Boolean(pendingCreation) || !selectedProduct || productos.length === 0} onClick={addDraftItem}>
         <Plus size={17} /> Agregar al pedido
       </button>
 
@@ -1581,7 +1962,7 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
                 </span>
                 <div className="actions">
                   <strong>{money(item.precio * item.cantidad)}</strong>
-                  <button className="btn danger" type="button" onClick={() => removeDraftItem(item.draftId)}>
+                  <button className="btn danger" type="button" disabled={submitting || Boolean(pendingCreation)} onClick={() => removeDraftItem(item.draftId)}>
                     <Trash2 size={15} />
                   </button>
                 </div>
@@ -1594,7 +1975,7 @@ function OrderForm({ productos, onSubmit }: { productos: Producto[]; onSubmit: (
           <strong>{money(draftTotal)}</strong>
         </div>
       </div>
-      <button className="btn primary wide" disabled={draftItems.length === 0}><Plus size={17} /> Enviar pedido</button>
+      <button className="btn primary wide" disabled={!draftRestored || submitting || draftItems.length === 0}><Plus size={17} /> Enviar pedido</button>
     </form>
   );
 }
@@ -1615,20 +1996,34 @@ function CloseAccountDialog({
   mesa,
   items,
   total,
+  initialPayment,
+  pending,
+  verifying,
+  onVerify,
   metodosPago,
+  error,
+  conflict,
+  submitting,
   onCancel,
   onConfirm
 }: {
-  mesa: Mesa;
+  mesa: PendingAccountClose["mesa"];
   items: CuentaDetalleItem[];
   total: number;
+  initialPayment?: PendingAccountClose["payment"];
+  pending: boolean;
+  verifying: boolean;
+  onVerify: () => void;
   metodosPago: MetodoPago[];
+  error: string;
+  conflict: boolean;
+  submitting: boolean;
   onCancel: () => void;
   onConfirm: (payment: { metodoPago: PaymentMethod; montoRecibido: number }) => void;
 }) {
   const defaultMetodo = metodosPago[0]?.nombre || "Efectivo";
-  const [metodoPago, setMetodoPago] = useState<PaymentMethod>(defaultMetodo);
-  const [montoRecibido, setMontoRecibido] = useState(total);
+  const [metodoPago, setMetodoPago] = useState<PaymentMethod>(initialPayment?.metodoPago || defaultMetodo);
+  const [montoRecibido, setMontoRecibido] = useState(initialPayment?.montoRecibido ?? total);
   const selectedMetodo = metodosPago.find((metodo) => metodo.nombre === metodoPago || metodo.codigo === metodoPago);
   const requiereMontoRecibido = selectedMetodo?.requiereMontoRecibido ?? metodoPago === "Efectivo";
   const efectivoInsuficiente = requiereMontoRecibido && montoRecibido < total;
@@ -1636,10 +2031,10 @@ function CloseAccountDialog({
   const vuelto = requiereMontoRecibido ? Math.max(0, montoRecibido - total) : 0;
 
   useEffect(() => {
-    if (!requiereMontoRecibido) {
+    if (!pending && !requiereMontoRecibido) {
       setMontoRecibido(total);
     }
-  }, [requiereMontoRecibido, total]);
+  }, [pending, requiereMontoRecibido, total]);
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -1681,7 +2076,7 @@ function CloseAccountDialog({
           <strong>{money(total)}</strong>
         </div>
 
-        <div className="payment-box">
+        <fieldset className="payment-box" disabled={pending || submitting}>
           <label className="field wide">
             Metodo de pago
             <PrettySelect
@@ -1706,12 +2101,19 @@ function CloseAccountDialog({
             <span>Vuelto: <strong>{money(vuelto)}</strong></span>
           </div>
           {efectivoInsuficiente && <p className="error">El monto recibido no puede ser menor al total.</p>}
-        </div>
+          {error && <p className="error" role="alert">{error}{conflict ? " Cerrá este formulario y actualizá la información antes de volver a cobrar." : ""}</p>}
+        </fieldset>
         <div className="actions modal-actions">
-          <button className="btn" type="button" onClick={onCancel}>Cancelar</button>
-          <button className="btn primary" type="button" disabled={efectivoInsuficiente} onClick={() => onConfirm({ metodoPago, montoRecibido: importeCobrado })}>
-            <Receipt size={17} /> Confirmar cierre
-          </button>
+          <button className="btn" type="button" disabled={submitting} onClick={onCancel}>{pending ? "Cerrar" : "Cancelar"}</button>
+          {pending ? (
+            <button className="btn primary" type="button" disabled={verifying || submitting} onClick={onVerify}>
+              {verifying ? "Verificando..." : "Verificar resultado del cobro"}
+            </button>
+          ) : (
+            <button className="btn primary" type="button" disabled={efectivoInsuficiente || submitting || conflict} onClick={() => onConfirm({ metodoPago, montoRecibido: importeCobrado })}>
+              <Receipt size={17} /> Confirmar cierre
+            </button>
+          )}
         </div>
       </section>
     </div>
@@ -1844,7 +2246,7 @@ function PedidoList({
 }: {
   pedidos: Pedido[];
   confirmDanger: (action: ConfirmAction) => void;
-  onKitchenStatusChange: (pedidoId: number, estadoCocina: string, estadoCocinaEsperado: string) => Promise<void>;
+  onKitchenStatusChange: (pedidoId: number, estadoCocina: string, estadoCocinaEsperado: string, atencionToken: string | null) => Promise<void>;
 }) {
   return (
     <div>
@@ -1858,7 +2260,7 @@ function PedidoList({
               <span className={`status kitchen-${statusSlug(pedido.estadoCocina)}`}>{pedido.estadoCocina}</span>
             </div>
             {pedido.estadoCocina === "Listo" && (
-              <button className="btn primary" type="button" onClick={() => onKitchenStatusChange(pedido.id, "Entregado", pedido.estadoCocinaCodigo || pedido.estadoCocina)}>
+              <button className="btn primary" type="button" onClick={() => onKitchenStatusChange(pedido.id, "Entregado", pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken)}>
                 <ChefHat size={16} /> Marcar entregado
               </button>
             )}
@@ -1882,7 +2284,7 @@ function PedidoList({
                     title: `Anular ${item.producto.nombre}`,
                     message: `Se va a anular ${item.cantidad} x ${item.producto.nombre} del pedido #${pedido.id}. El movimiento queda registrado como correccion de pedido.`,
                     confirmLabel: "Item anulado",
-                    onConfirm: () => api(`/api/pedidos/items/${item.id}`, { method: "DELETE", body: JSON.stringify({ motivo: "Correccion de pedido" }) })
+                    onConfirm: () => api(`/api/pedidos/items/${item.id}`, { method: "DELETE", body: JSON.stringify({ motivo: "Correccion de pedido", atencionToken: pedido.atencionToken }) })
                   })}>
                     <Trash2 size={15} />
                   </button>

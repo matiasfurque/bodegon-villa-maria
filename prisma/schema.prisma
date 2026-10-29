@@ -82,6 +82,8 @@ model Mesa {
   numero      Int       @unique
   descripcion String?
   capacidad   Int
+  revision    Int       @default(0)
+  atencionToken String?  @db.Uuid
   estadoId    Int       @default(1)
   sectorId    Int?
   abiertaAt   DateTime?
@@ -188,6 +190,10 @@ model Pedido {
   id          Int       @id @default(autoincrement())
   mesaId      Int
   usuarioId   Int
+  atencionToken String?  @db.Uuid
+  solicitudId String? @unique @db.Uuid
+  solicitudHash String?
+  revisionContenido Int @default(0)
   fechaHora   DateTime  @default(now())
   estadoId    Int       @default(1)
   estadoCocinaId Int    @default(1)
@@ -225,6 +231,8 @@ model PedidoItem {
   id             Int      @id @default(autoincrement())
   pedidoId       Int
   productoId     Int
+  solicitudId    String?  @unique @db.Uuid
+  solicitudHash  String?
   cantidad       Int
   precioUnitario Decimal
   subtotal       Decimal
@@ -272,6 +280,7 @@ model Cuenta {
   id              Int      @id @default(autoincrement())
   mesaId          Int
   usuarioCierreId Int
+  atencionToken   String?  @unique @db.Uuid
   fechaCierre     DateTime @default(now())
   total           Decimal
   metodoPagoId    Int      @default(1)

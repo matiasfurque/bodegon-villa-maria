@@ -9,6 +9,8 @@ export type TableCreateInput = {
   capacidad: number;
   descripcion?: string | null;
   estado?: unknown;
+  revisionEsperada?: unknown;
+  atencionTokenEsperado?: unknown;
 };
 
 export type TableUpdateInput = {
@@ -16,4 +18,8 @@ export type TableUpdateInput = {
   capacidad?: number | string | null;
   descripcion?: string | null;
   estado?: unknown;
+  revisionEsperada?: unknown;
+  atencionTokenEsperado?: unknown;
 };
+
+export type TableExpectedIdentity = Pick<TableUpdateInput, "revisionEsperada" | "atencionTokenEsperado">;

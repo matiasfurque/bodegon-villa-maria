@@ -15,15 +15,63 @@ export const tableRepository = {
   },
 
   findByIdOrThrow(db: TableDb, id: number) {
-    return db.mesa.findUniqueOrThrow({ where: { id }, include: { estado: true } });
+    return db.mesa.findUniqueOrThrow({ where: { id }, include: withRelations });
+  },
+
+  findById(db: TableDb, id: number) {
+    return db.mesa.findUnique({ where: { id }, include: { estado: true } });
   },
 
   lock(db: TableDb, id: number) {
     return db.$queryRaw`SELECT "id" FROM "Mesa" WHERE "id" = ${id} FOR UPDATE`;
   },
 
+  lockForOrder(db: TableDb, pedidoId: number) {
+    return db.$queryRaw<Array<{ id: number }>>`
+      SELECT m."id" FROM "Mesa" m
+      JOIN "Pedido" p ON p."mesaId" = m."id"
+      WHERE p."id" = ${pedidoId}
+      FOR UPDATE OF m
+    `;
+  },
+
+  lockForItem(db: TableDb, itemId: number) {
+    return db.$queryRaw<Array<{ id: number }>>`
+      SELECT m."id" FROM "Mesa" m
+      JOIN "Pedido" p ON p."mesaId" = m."id"
+      JOIN "PedidoItem" i ON i."pedidoId" = p."id"
+      WHERE i."id" = ${itemId}
+      FOR UPDATE OF m
+    `;
+  },
+
   countActiveOrders(db: TableDb, mesaId: number) {
     return db.pedido.count({ where: { mesaId, estado: { esActivo: true } } });
+  },
+
+  findForeignActiveOrder(db: TableDb, mesaId: number, atencionToken: string) {
+    return db.pedido.findFirst({
+      where: { mesaId, estado: { esActivo: true },
+        OR: [{ atencionToken: null }, { atencionToken: { not: atencionToken } }] },
+      select: { id: true }
+    });
+  },
+
+  countActiveOrdersWithItems(db: TableDb, mesaId: number, atencionToken: string) {
+    return db.pedido.count({
+      where: { mesaId, atencionToken, estado: { esActivo: true }, items: { some: { estado: { esAnulado: false } } } }
+    });
+  },
+
+  findOrderStateByCode(db: TableDb, codigo: string) {
+    return db.pedidoEstado.findUniqueOrThrow({ where: { codigo } });
+  },
+
+  cancelActiveOrders(db: TableDb, mesaId: number, estadoId: number, atencionToken: string) {
+    return db.pedido.updateMany({
+      where: { mesaId, atencionToken, estado: { esActivo: true } },
+      data: { estadoId }
+    });
   },
 
   findState(db: TableDb, text: string, fallbackCodigo: string) {

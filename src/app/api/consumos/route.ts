@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { json, requirePermission } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { orderRepository } from "@/modules/orders/order.repository";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "operaciones.gestionar");
@@ -8,25 +10,17 @@ export async function GET(request: NextRequest) {
   const mesaId = request.nextUrl.searchParams.get("mesaId");
   if (!mesaId) return json({ error: "mesaId es obligatorio" }, 400);
 
-  const mesa = await prisma.mesa.findUnique({
-    where: { id: Number(mesaId) },
-    include: {
-      pedidos: {
-        orderBy: { fechaHora: "desc" },
-        include: {
-          estado: true,
-          estadoCocina: true,
-          usuario: { select: { nombre: true, apellido: true } },
-          items: { include: { producto: true, estado: true } }
-        }
-      }
-    }
-  });
+  const result = await prisma.$transaction(async (tx) => {
+    const mesa = await tx.mesa.findUnique({ where: { id: Number(mesaId) } });
+    if (!mesa) return null;
+    const pedidos = mesa.atencionToken
+      ? await orderRepository.listActiveConsumption(tx, mesa.id, mesa.atencionToken)
+      : [];
+    const total = pedidos.flatMap((pedido) => pedido.items)
+      .reduce((sum, item) => sum + Number(item.subtotal), 0);
+    return { mesa: { ...mesa, pedidos }, total };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 
-  if (!mesa) return json({ error: "Mesa inexistente" }, 404);
-  const validItems = mesa.pedidos.flatMap((pedido) =>
-    pedido.items.filter((item) => !item.estado.esAnulado && pedido.estado.esActivo)
-  );
-  const total = validItems.reduce((sum, item) => sum + Number(item.subtotal), 0);
-  return json({ mesa, total });
+  if (!result) return json({ error: "Mesa inexistente" }, 404);
+  return json(result);
 }

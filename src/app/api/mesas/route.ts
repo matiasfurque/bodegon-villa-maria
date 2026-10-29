@@ -1,20 +1,8 @@
 import { NextRequest } from "next/server";
 import { json, requirePermission, requireSession } from "@/lib/api";
-import { CODES } from "@/lib/normalized";
 import { tableService } from "@/modules/tables/table.service";
-import type { TableWithRelations } from "@/modules/tables/table.types";
-
-function serializeMesa(mesa: TableWithRelations) {
-  return {
-    ...mesa,
-    estado: mesa.estado.nombre,
-    estadoCodigo: mesa.estado.codigo,
-    estadoPermitePedido: mesa.estado.permitePedido,
-    estadoLiberaMesa: mesa.estado.liberaMesa,
-    sector: mesa.sector?.nombre || null,
-    activa: mesa.estado.codigo !== CODES.mesa.cerrada
-  };
-}
+import { serializeMesa } from "@/modules/tables/table.serializer";
+import { transactionErrorResponse } from "@/lib/transaction-error";
 
 export async function GET(request: NextRequest) {
   const auth = requireSession(request);
@@ -36,7 +24,11 @@ export async function POST(request: NextRequest) {
     return json({ error: "Ingresá una capacidad válida" }, 400);
   }
 
-  const result = await tableService.create({ ...data, numero, capacidad });
-  if ("error" in result) return json({ error: result.error }, 400);
-  return json(serializeMesa(result.mesa), result.created ? 201 : 200);
+  try {
+    const result = await tableService.create({ ...data, numero, capacidad }, auth.session?.userId);
+    if ("error" in result) return json({ error: result.error }, "status" in result && typeof result.status === "number" ? result.status : 400);
+    return json(serializeMesa(result.mesa), result.created ? 201 : 200);
+  } catch (error) {
+    return transactionErrorResponse(error, "mesa");
+  }
 }

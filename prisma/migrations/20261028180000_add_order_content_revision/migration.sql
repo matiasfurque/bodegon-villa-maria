@@ -1,0 +1,2 @@
+ALTER TABLE "Pedido"
+  ADD COLUMN "revisionContenido" INTEGER NOT NULL DEFAULT 0;
