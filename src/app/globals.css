@@ -53,15 +53,35 @@ button:disabled {
 
 .hero {
   min-height: 84vh;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: grid;
   align-items: flex-end;
-  background:
-    linear-gradient(180deg, rgba(12, 35, 24, 0.28), rgba(12, 35, 24, 0.88)),
-    url("https://verdeoliva.com.ar/assets/grill1-1920w-CwJt8bMd.webp");
-  background-size: cover;
-  background-position: center;
+  background: #14251c;
   color: white;
   padding: 28px;
+}
+
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.hero::before {
+  inset: -24px;
+  background: url("/images/banner-bodegon-villa-maria.jpg") center / cover no-repeat;
+  filter: blur(24px) brightness(0.42);
+}
+
+.hero::after {
+  background:
+    linear-gradient(180deg, rgba(12, 35, 24, 0.08) 20%, rgba(12, 35, 24, 0.9) 100%),
+    url("/images/banner-bodegon-villa-maria.jpg") center / auto 100% no-repeat;
 }
 
 .hero-inner,
@@ -1688,6 +1708,12 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
+  .hero::after {
+    background:
+      linear-gradient(180deg, rgba(12, 35, 24, 0.05) 18%, rgba(12, 35, 24, 0.94) 80%),
+      url("/images/banner-bodegon-villa-maria.jpg") center top / 100% auto no-repeat;
+  }
+
   .hero-inner,
   .public-section,
   .app-shell {
