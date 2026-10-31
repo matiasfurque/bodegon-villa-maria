@@ -44,6 +44,8 @@ const tabs: Array<{ label: string; permiso: PermissionCode }> = [
   { label: "Historial", permiso: "historial.ver" }
 ];
 const emptyCatalogs: Catalogs = { metodosPago: [], cocinaEstados: [] };
+const OPERATIONAL_REFRESH_MS = 7000;
+const OPERATIONAL_REFRESH_DEDUPE_MS = 2000;
 
 class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -54,6 +56,7 @@ class ApiError extends Error {
 async function api(path: string, options?: RequestInit) {
   const response = await fetch(path, {
     ...options,
+    cache: (options?.method || "GET").toUpperCase() === "GET" ? "no-store" : options?.cache,
     headers: { "Content-Type": "application/json", ...(options?.headers || {}) }
   });
   const data = await response.json().catch(() => ({}));
@@ -124,6 +127,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const autoRefreshRunningRef = useRef(false);
   const actionRunningRef = useRef(false);
   const modalOpenRef = useRef(false);
+  const lastOperationalRefreshRef = useRef(0);
+  const localMutationVersionRef = useRef(0);
   const selectedMesa = mesas.find((mesa) => mesa.id === selectedMesaId) || mesas[0] || null;
   const nextMesaNumber = useMemo(
     () => Math.max(0, ...mesas.map((mesa) => mesa.numero)) + 1,
@@ -302,18 +307,37 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     await refreshReport(fromText, toText);
   }
 
+  function applyOperationalData(mesasData: Mesa[], allPedidosData: Pedido[]) {
+    setMesas(mesasData);
+    setAllPedidos(allPedidosData);
+    const currentMesaId = selectedMesaIdRef.current;
+    const nextMesaId = currentMesaId && mesasData.some((mesa) => mesa.id === currentMesaId)
+      ? currentMesaId
+      : mesasData[0]?.id || null;
+    if (nextMesaId !== currentMesaId) {
+      selectedMesaIdRef.current = nextMesaId;
+      setSelectedMesaId(nextMesaId);
+    }
+    setPedidos(nextMesaId ? allPedidosData.filter((pedido) => pedido.mesaId === nextMesaId) : []);
+    lastOperationalRefreshRef.current = Date.now();
+  }
+
   async function loadAll() {
-    const [mesasData, categoriasData, productosData, allPedidosData, catalogsData] = await Promise.all([
+    const version = localMutationVersionRef.current;
+    const operationalData = Promise.all([
       api("/api/mesas"),
+      api("/api/pedidos")
+    ]).then(([mesasData, allPedidosData]) => {
+      if (version === localMutationVersionRef.current) applyOperationalData(mesasData, allPedidosData);
+    });
+    const [, categoriasData, productosData, catalogsData] = await Promise.all([
+      operationalData,
       api("/api/categories"),
       api("/api/products"),
-      api("/api/pedidos"),
       api("/api/catalogs")
     ]);
-    setMesas(mesasData);
     setCategorias(categoriasData);
     setProductos(productosData);
-    setAllPedidos(allPedidosData);
     setCatalogs(catalogsData);
     if (canManageUsers) {
       const [rolesData, usersData] = await Promise.all([
@@ -329,34 +353,15 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     if (canViewHistory) {
       await loadCuentas();
     }
-    const mesaId = selectedMesaId || mesasData[0]?.id;
-    setSelectedMesaId(mesaId || null);
-    if (mesaId) setPedidos(await api(`/api/pedidos?mesaId=${mesaId}`));
   }
 
   async function loadOperationalData() {
+    const version = localMutationVersionRef.current;
     const [mesasData, allPedidosData] = await Promise.all([
       api("/api/mesas"),
       api("/api/pedidos")
     ]);
-    setMesas(mesasData);
-    setAllPedidos(allPedidosData);
-
-    const currentMesaId = selectedMesaIdRef.current;
-    const nextMesaId = currentMesaId && mesasData.some((mesa: Mesa) => mesa.id === currentMesaId)
-      ? currentMesaId
-      : mesasData[0]?.id || null;
-
-    if (nextMesaId !== currentMesaId) {
-      selectedMesaIdRef.current = nextMesaId;
-      setSelectedMesaId(nextMesaId);
-    }
-
-    if (nextMesaId) {
-      setPedidos(await api(`/api/pedidos?mesaId=${nextMesaId}`));
-    } else {
-      setPedidos([]);
-    }
+    if (version === localMutationVersionRef.current) applyOperationalData(mesasData, allPedidosData);
   }
 
   async function refreshAll() {
@@ -406,7 +411,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }, [canManageOperaciones, user.id]);
 
   useEffect(() => {
+    const previous = activeRef.current;
     activeRef.current = active;
+    if (previous !== active && ["Operaciones", "Cocina"].includes(active)) {
+      void refreshOperationalData();
+    }
   }, [active]);
 
   useEffect(() => {
@@ -417,24 +426,34 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     modalOpenRef.current = Boolean(closeAttention || showSecurity || confirmAction);
   }, [confirmAction, closeAttention, showSecurity]);
 
+  async function refreshOperationalData() {
+    if (!["Operaciones", "Cocina"].includes(activeRef.current)) return;
+    if (document.visibilityState !== "visible") return;
+    if (autoRefreshRunningRef.current) return;
+    if (actionRunningRef.current || modalOpenRef.current) return;
+    if (Date.now() - lastOperationalRefreshRef.current < OPERATIONAL_REFRESH_DEDUPE_MS) return;
+
+    try {
+      autoRefreshRunningRef.current = true;
+      await loadOperationalData();
+    } catch {
+      // El boton Actualizar muestra errores visibles; el refresco automatico evita interrumpir el trabajo.
+    } finally {
+      autoRefreshRunningRef.current = false;
+    }
+  }
+
   useEffect(() => {
-    const interval = window.setInterval(async () => {
-      if (!["Operaciones", "Cocina"].includes(activeRef.current)) return;
-      if (document.visibilityState !== "visible") return;
-      if (autoRefreshRunningRef.current) return;
-      if (actionRunningRef.current || modalOpenRef.current) return;
+    const interval = window.setInterval(refreshOperationalData, OPERATIONAL_REFRESH_MS);
+    const refreshWhenVisible = () => { void refreshOperationalData(); };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenVisible);
 
-      try {
-        autoRefreshRunningRef.current = true;
-        await loadOperationalData();
-      } catch {
-        // El boton Actualizar muestra errores visibles; el refresco automatico evita interrumpir el trabajo.
-      } finally {
-        autoRefreshRunningRef.current = false;
-      }
-    }, 15000);
-
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenVisible);
+    };
   }, []);
 
   useEffect(() => {
@@ -446,10 +465,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   async function run<T>(action: () => Promise<T>, ok = "Operacion realizada"): Promise<{ ok: true; value: T } | { ok: false }> {
     try {
       actionRunningRef.current = true;
+      localMutationVersionRef.current += 1;
       setMessage("");
       const value = await action();
       try {
-        await loadAll();
+        await (["Operaciones", "Cocina"].includes(activeRef.current) ? loadOperationalData() : loadAll());
         setMessage(ok);
       } catch {
         setMessage(`${ok}. No se pudo actualizar la vista; presioná Actualizar.`);
@@ -589,6 +609,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     setPendingClose(snapshot);
     try {
       actionRunningRef.current = true;
+      localMutationVersionRef.current += 1;
       setClosingAccount(true);
       setCloseError("");
       setCloseConflict(false);
@@ -658,15 +679,13 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     atencionToken: string | null, revisionContenidoEsperada?: number) {
     try {
       actionRunningRef.current = true;
+      localMutationVersionRef.current += 1;
       setMessage("");
-      await api(`/api/pedidos/${pedidoId}`, { method: "PATCH",
+      const updated: Pedido = await api(`/api/pedidos/${pedidoId}`, { method: "PATCH",
         body: JSON.stringify({ estadoCocina, estadoCocinaEsperado, atencionToken, revisionContenidoEsperada }) });
-      try {
-        await loadOperationalData();
-        setMessage("Pedido actualizado");
-      } catch {
-        setMessage("Pedido actualizado. No se pudo actualizar la vista; presioná Actualizar.");
-      }
+      setAllPedidos((current) => current.map((pedido) => pedido.id === pedidoId ? updated : pedido));
+      setPedidos((current) => current.map((pedido) => pedido.id === pedidoId ? updated : pedido));
+      setMessage("Pedido actualizado");
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         await loadOperationalData().catch(() => {});
