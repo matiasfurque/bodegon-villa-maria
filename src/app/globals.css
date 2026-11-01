@@ -250,88 +250,187 @@ button:disabled {
   box-shadow: 0 12px 34px rgba(23, 20, 18, 0.06);
 }
 
-.public-shell .card h3,
-.public-shell .menu-category h3 {
+.public-shell .card h3 {
   color: var(--accent);
 }
 
-.menu-category h3,
 .card h3 {
   margin: 0 0 12px;
 }
 
-.menu-category {
-  position: relative;
-  overflow: hidden;
+#menu {
+  scroll-margin-top: 74px;
 }
 
-.public-menu-list {
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  align-items: start;
-  gap: 12px;
+#menu .section-head {
+  margin-bottom: 26px;
 }
 
-.menu-category summary {
-  min-height: 62px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: pointer;
-  list-style: none;
-  padding-top: 4px;
+#menu .section-head h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 4vw, 44px);
+  letter-spacing: -0.035em;
+  text-transform: none;
 }
 
-.menu-category summary::-webkit-details-marker {
-  display: none;
+#menu .section-head .muted {
+  margin-bottom: 0;
+  line-height: 1.5;
 }
 
-.menu-category summary h3 {
+.digital-menu-eyebrow,
+.digital-menu-selection-label {
+  margin: 0 0 8px;
+  color: var(--brand-red);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.digital-menu {
   min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
 }
 
-.menu-category summary span {
-  flex: 0 0 auto;
+.digital-menu-categories {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 4px 9px;
-  background: white;
-  color: var(--muted);
-  font-size: 12px;
+  border-radius: 18px;
+  background: #eee7d8;
+  scrollbar-width: thin;
+  scrollbar-color: #b9aa93 transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.digital-menu-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 9px 16px;
+  background: transparent;
+  color: var(--accent-strong);
   font-weight: 800;
+  white-space: nowrap;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.digital-menu-chip:hover {
+  background: #fffaf0;
+}
+
+.digital-menu-chip:focus-visible {
+  outline: 3px solid var(--brand-gold);
+  outline-offset: 2px;
+}
+
+.digital-menu-chip.is-active {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 5px 14px rgba(19, 78, 47, 0.19);
+}
+
+.digital-menu-chip.is-active:hover {
+  background: var(--accent-strong);
+}
+
+.digital-menu-chip small {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 1px 5px;
+  background: rgba(19, 78, 47, 0.1);
+  font-size: 11px;
+}
+
+.digital-menu-chip.is-active small {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.digital-menu-selection {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 30px 0 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.digital-menu-selection h3 {
+  margin: 0;
+  color: var(--accent-strong);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(27px, 3vw, 34px);
+  letter-spacing: -0.03em;
+}
+
+.digital-menu-selection > span {
+  color: var(--muted);
+  font-size: 13px;
   white-space: nowrap;
 }
 
-.menu-category summary::after {
-  content: "+";
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
+.digital-menu-products {
   display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: #e6f4ee;
-  color: var(--accent);
-  font-weight: 900;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.menu-category[open] summary::after {
-  content: "-";
+.digital-menu-product {
+  min-width: 0;
+  min-height: 172px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 22px;
+  border: 1px solid #e7d8c3;
+  border-radius: 18px;
+  padding: 22px;
+  background: linear-gradient(145deg, #fffcf5, #fff8ec);
+  box-shadow: 0 10px 24px rgba(44, 33, 20, 0.07);
 }
 
-.menu-category-body {
-  border-top: 1px solid var(--line);
-  margin-top: 8px;
+.digital-menu-product h4 {
+  margin: 0;
+  color: var(--accent-strong);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
 }
 
-.menu-category::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 5px;
-  background: linear-gradient(90deg, var(--accent), var(--brand-gold), var(--brand-red));
+.digital-menu-product p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.digital-menu-price {
+  align-self: flex-start;
+  border-top: 2px solid var(--brand-red);
+  padding-top: 9px;
+  color: var(--accent-strong);
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.digital-menu-empty {
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  background: var(--panel);
+  color: var(--muted);
 }
 
 .card.selected {
@@ -410,15 +509,6 @@ button:disabled {
 .menu-item > strong,
 .nowrap {
   white-space: nowrap;
-}
-
-.public-shell .menu-item {
-  align-items: flex-start;
-}
-
-.public-shell .menu-item p {
-  margin: 8px 0 0;
-  line-height: 1.25;
 }
 
 .public-empty-state {
@@ -1708,6 +1798,12 @@ button:disabled {
   padding: 14px;
 }
 
+@media (max-width: 1000px) {
+  .digital-menu-products {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 860px) {
   .workspace,
   .form-grid,
@@ -1875,22 +1971,23 @@ button:disabled {
     padding: 34px 0;
   }
 
-  .public-menu-list {
-    gap: 8px;
+  .digital-menu-products {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  .menu-category summary {
-    min-height: 54px;
+  .digital-menu-product {
+    min-height: 148px;
+    padding: 19px;
   }
 
-  .menu-category summary span {
-    display: none;
+  .digital-menu-selection {
+    align-items: flex-start;
+    margin-top: 24px;
   }
 
-  .public-shell .menu-item {
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 0;
+  .digital-menu-selection > span {
+    padding-top: 4px;
   }
 
   .table {

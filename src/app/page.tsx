@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, Clock, Instagram, MapPin, Utensils } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { money } from "@/lib/money";
+import PublicMenu from "./public-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -11,13 +11,16 @@ export default async function HomePage() {
     .findMany({
       where: { estado: { visibleEnMenu: true, habilitado: true } },
       orderBy: [{ orden: "asc" }, { nombre: "asc" }],
-      include: {
+      select: {
+        id: true,
+        nombre: true,
         productos: {
           where: {
             estado: { permiteVenta: true },
             visibilidad: { visibleEnMenu: true }
           },
-          orderBy: { nombre: "asc" }
+          orderBy: { nombre: "asc" },
+          select: { id: true, nombre: true, descripcion: true, precio: true }
         }
       }
     })
@@ -62,8 +65,9 @@ export default async function HomePage() {
       <section id="menu" className="public-section">
         <div className="section-head">
           <div>
-            <h2>Menu digital</h2>
-            <p className="muted">Carta simple, abundante y actualizada desde el sistema interno.</p>
+            <p className="digital-menu-eyebrow">Nuestra carta</p>
+            <h2>Menú digital</h2>
+            <p className="muted">Elegí una categoría y descubrí los sabores de Villa María.</p>
           </div>
         </div>
         {!menuDisponible ? (
@@ -72,31 +76,16 @@ export default async function HomePage() {
             <p className="muted">Estamos actualizando la carta. Probá nuevamente en unos minutos.</p>
           </div>
         ) : (
-          <div className="menu-grid public-menu-list">
-            {categorias.map((categoria) => (
-              <details className="panel menu-category" key={categoria.id}>
-                <summary>
-                  <h3>{categoria.nombre}</h3>
-                  <span>{categoria.productos.length} productos</span>
-                </summary>
-                <div className="menu-category-body">
-                  {categoria.productos.length === 0 ? (
-                    <p className="muted">Sin productos visibles.</p>
-                  ) : (
-                    categoria.productos.map((producto) => (
-                      <div className="menu-item" key={producto.id}>
-                        <div>
-                          <strong>{producto.nombre}</strong>
-                          <p className="muted">{producto.descripcion}</p>
-                        </div>
-                        <strong>{money(producto.precio)}</strong>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </details>
-            ))}
-          </div>
+          <PublicMenu categorias={categorias.map((categoria) => ({
+            id: categoria.id,
+            nombre: categoria.nombre,
+            productos: categoria.productos.map((producto) => ({
+              id: producto.id,
+              nombre: producto.nombre,
+              descripcion: producto.descripcion,
+              precio: producto.precio?.toString() ?? null
+            }))
+          }))} />
         )}
       </section>
 
