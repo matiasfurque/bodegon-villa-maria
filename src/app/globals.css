@@ -294,8 +294,8 @@ button:disabled {
 
 .digital-menu-categories {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -1974,6 +1974,11 @@ button:disabled {
   .digital-menu-products {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .digital-menu-categories {
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
 
   .digital-menu-product {
