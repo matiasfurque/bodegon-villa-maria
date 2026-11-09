@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { CalendarDays, Clock, Instagram, MapPin, Utensils } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Clock, Instagram, MapPin, Utensils } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import PublicMenu from "./public-menu";
 
 export const dynamic = "force-dynamic";
+
+const locationQuery = encodeURIComponent("Lisandro de la Torre 2331, Mataderos, CABA");
 
 export default async function HomePage() {
   let menuDisponible = true;
@@ -89,32 +91,80 @@ export default async function HomePage() {
         )}
       </section>
 
-      <section id="contacto" className="public-section">
-        <div className="cards-grid">
-          <div className="card">
-            <h3>
-              <MapPin size={18} /> Ubicacion
-            </h3>
-            <p className="muted">Lisandro de la Torre 2331, Caba, Mataderos.</p>
-          </div>
-          <div className="card">
-            <h3>
-              <Clock size={18} /> Horarios
-            </h3>
-            <p className="muted">Martes a viernes de 9 a 15 hs. Sabados y domingos de 9 hs en adelante.</p>
-          </div>
-          <div className="card">
-            <h3>
-              <CalendarDays size={18} /> Encuentros
-            </h3>
-            <p className="muted">Espacio de encuentro social, eventos, meriendas y propuestas culturales.</p>
-          </div>
-          <div className="card">
-            <h3>
-              <Instagram size={18} /> Instagram
-            </h3>
-            <p className="muted">@villamaria.mtd</p>
-          </div>
+      <section id="contacto" className="public-section contact-section">
+        <div className="contact-intro">
+          <p className="contact-eyebrow">Encontranos</p>
+          <h2>Nos vemos en Villa María</h2>
+          <p>Te esperamos en Mataderos para compartir un buen momento.</p>
+        </div>
+
+        <div className="contact-feature-grid">
+          <article className="contact-location-card">
+            <div className="contact-location-head">
+              <span className="contact-location-icon"><MapPin size={24} aria-hidden="true" /></span>
+              <div>
+                <p className="contact-card-label">Ubicación</p>
+                <h3>Vení al bodegón</h3>
+              </div>
+            </div>
+            <div className="contact-map">
+              <iframe
+                title="Mapa de Bodegón Villa María en Lisandro de la Torre 2331"
+                src={`https://www.google.com/maps?q=${locationQuery}&output=embed`}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
+            <div className="contact-location-footer">
+              <p>Lisandro de la Torre 2331, Mataderos, CABA.</p>
+              <a
+                className="contact-link contact-map-link"
+                href={`https://www.google.com/maps/search/?api=1&query=${locationQuery}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Cómo llegar <ArrowUpRight size={18} aria-hidden="true" />
+              </a>
+            </div>
+          </article>
+
+          <article className="contact-instagram-card">
+            <div className="contact-instagram-top">
+              <span className="contact-instagram-icon"><Instagram size={32} aria-hidden="true" /></span>
+              <span>Seguinos de cerca</span>
+            </div>
+            <div>
+              <p className="contact-card-label">Instagram</p>
+              <h3>@villamaria.mtd</h3>
+              <p className="contact-instagram-description">Descubrí nuestros platos, encuentros y momentos del bodegón.</p>
+            </div>
+            <a
+              className="contact-link contact-instagram-link"
+              href="https://www.instagram.com/villamaria.mtd/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Visitar Instagram <ArrowUpRight size={18} aria-hidden="true" />
+            </a>
+          </article>
+        </div>
+
+        <div className="contact-info-grid">
+          <article className="contact-info-card">
+            <Clock size={23} aria-hidden="true" />
+            <div>
+              <h3>Horarios</h3>
+              <p>Martes a viernes de 9 a 15 hs. Sabados y domingos de 9 hs en adelante.</p>
+            </div>
+          </article>
+          <article className="contact-info-card">
+            <CalendarDays size={23} aria-hidden="true" />
+            <div>
+              <h3>Encuentros</h3>
+              <p>Espacio de encuentro social, eventos, meriendas y propuestas culturales.</p>
+            </div>
+          </article>
         </div>
       </section>
     </main>
