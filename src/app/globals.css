@@ -1808,6 +1808,13 @@ button:disabled {
 .kitchen-timing-near { --timer-accent: #aa7b12; --timer-ink: #6b4c0b; background: #fff9e9; border-color: #efdfac; }
 .kitchen-timing-urgent { --timer-accent: #c66b24; --timer-ink: #74401a; background: #fff3e9; border-color: #efd3b8; }
 .kitchen-timing-overdue { --timer-accent: #b83f35; --timer-ink: #722d29; background: #fff0ee; border-color: #ebc7c2; }
+.kitchen-timing-provisional { border-style: dashed; }
+
+.kitchen-timing-confirming {
+  margin-top: -7px;
+  color: var(--timer-accent);
+  font-weight: 700;
+}
 
 .kitchen-timing-head,
 .kitchen-estimate-heading {
