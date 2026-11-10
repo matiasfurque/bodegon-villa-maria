@@ -1737,12 +1737,16 @@ button:disabled {
 .kitchen-ticket-en-preparacion { border-left: 4px solid #0284c7; }
 .kitchen-ticket-listo { border-left: 4px solid #16803f; }
 .kitchen-ticket-near {
-  border-color: #c68b2b;
-  box-shadow: 0 8px 24px rgba(154, 108, 55, 0.12);
+  border-color: #c69a35;
+  box-shadow: 0 8px 24px rgba(154, 108, 55, 0.1);
+}
+.kitchen-ticket-urgent {
+  border-color: #c77534;
+  box-shadow: 0 8px 24px rgba(161, 83, 29, 0.12);
 }
 .kitchen-ticket-overdue {
-  border-color: #bb5b28;
-  box-shadow: 0 8px 24px rgba(149, 61, 20, 0.12);
+  border-color: #b94b3c;
+  box-shadow: 0 8px 24px rgba(149, 45, 33, 0.13);
 }
 
 .kitchen-ticket-head {
@@ -1786,66 +1790,123 @@ button:disabled {
   color: #9d3d15;
 }
 
-.kitchen-wait-alert {
-  margin: -5px 0 0;
-  color: #9d3d15;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.kitchen-wait-alert.near { color: #8b5d17; }
-
 .kitchen-timing {
+  --timer-accent: #176448;
+  --timer-ink: #103e30;
   display: grid;
-  gap: 7px;
-  border-radius: 10px;
-  padding: 12px;
-  background: #f5f1e9;
-  font-size: 13px;
+  gap: 11px;
+  border: 1px solid #d9e7dc;
+  border-radius: 14px;
+  padding: 15px 16px;
+  background: #f3f8f3;
+  color: var(--timer-ink);
+  font-size: 12px;
 }
 
-.kitchen-timing p { margin: 0; }
-.kitchen-timing-preparing { background: #eef5f7; }
+.kitchen-timing-waiting { background: #f7f3eb; border-color: #e7dac5; }
 .kitchen-timing-pickup { background: #edf6ed; }
-.kitchen-ticket-near .kitchen-timing-preparing { background: #fff7e5; }
-.kitchen-ticket-overdue .kitchen-timing-preparing { background: #fff0e5; }
+.kitchen-timing-near { --timer-accent: #aa7b12; --timer-ink: #6b4c0b; background: #fff9e9; border-color: #efdfac; }
+.kitchen-timing-urgent { --timer-accent: #c66b24; --timer-ink: #74401a; background: #fff3e9; border-color: #efd3b8; }
+.kitchen-timing-overdue { --timer-accent: #b83f35; --timer-ink: #722d29; background: #fff0ee; border-color: #ebc7c2; }
 
-.kitchen-timing-row {
+.kitchen-timing-head,
+.kitchen-estimate-heading {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 5px 12px;
+  align-items: center;
+  gap: 6px 12px;
+  font-weight: 700;
+}
+
+.kitchen-timing-state {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: var(--timer-accent);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.kitchen-clock {
+  color: var(--timer-ink);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.kitchen-clock-primary {
+  font-size: clamp(38px, 4vw, 52px);
+}
+
+.kitchen-timing-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.kitchen-overdue-note {
+  margin-top: -5px;
+  color: var(--timer-accent);
+  font-weight: 800;
+}
+
+.kitchen-timing-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.kitchen-timing-metrics span {
+  display: grid;
+  gap: 4px;
+  color: #566258;
+}
+
+.kitchen-timing-metrics strong {
+  color: var(--timer-ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
 }
 
 .kitchen-progress {
   overflow: hidden;
-  height: 9px;
+  height: 8px;
   border-radius: 999px;
-  background: #d7e0df;
+  background: rgba(44, 69, 49, 0.13);
 }
 
 .kitchen-progress > span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #0284c7;
-  transition: width 250ms ease;
+  background: var(--timer-accent);
+  transition: width 350ms linear, background-color 350ms ease;
 }
-
-.kitchen-ticket-near .kitchen-progress > span { background: #b8791d; }
-.kitchen-ticket-overdue .kitchen-progress > span { background: #bb5b28; }
 
 .kitchen-estimate-control {
   display: grid;
-  gap: 7px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px;
+  gap: 9px;
+  border: 1px solid #e4dbcc;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fbf8f2;
 }
 
-.kitchen-estimate-control > strong {
+.kitchen-estimate-heading {
+  color: var(--ink);
   font-size: 12px;
-  font-weight: 800;
+}
+
+.kitchen-estimate-heading span {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 
 .kitchen-estimate-options {
@@ -1855,10 +1916,10 @@ button:disabled {
 }
 
 .kitchen-estimate-chip {
-  min-height: 38px;
+  min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 6px 11px;
+  padding: 5px 10px;
   background: white;
   color: var(--ink);
   font: inherit;

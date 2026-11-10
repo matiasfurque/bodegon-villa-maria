@@ -10,7 +10,7 @@ import type { PendingAccountClose } from "@/modules/accounts/account-pending";
 import { readPendingOrderDraft, savePendingOrderDraft } from "@/modules/orders/order-draft";
 import type { OrderAttention, OrderDraftItem, PendingOrderCreation } from "@/modules/orders/order-draft";
 import { DEFAULT_PREPARATION_ESTIMATE_MINUTES, PREPARATION_ESTIMATE_OPTIONS, validPreparationEstimate } from "@/modules/orders/preparation-estimate";
-import { formatKitchenElapsed, kitchenTiming } from "./kitchen-time";
+import { formatKitchenClock, kitchenTiming } from "./kitchen-time";
 
 type Role = { id: number; nombre: string };
 type PermissionCode = "inicio.ver" | "operaciones.gestionar" | "cocina.gestionar" | "productos.gestionar" | "usuarios.gestionar" | "reportes.ver" | "historial.ver";
@@ -468,7 +468,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
     if (active !== "Cocina") return;
     const updateClock = () => setKitchenNow(Date.now());
     updateClock();
-    const interval = window.setInterval(updateClock, 15_000);
+    const interval = window.setInterval(updateClock, 1_000);
     document.addEventListener("visibilitychange", updateClock);
     return () => {
       window.clearInterval(interval);
@@ -1072,7 +1072,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                 const estimateOptions = { preparacionEstimadaMinutos: selectedEstimate };
 
                 return (
-                  <article className={`kitchen-ticket kitchen-ticket-${statusSlug(pedido.estadoCocina)}${timing?.alert === "near" ? " kitchen-ticket-near" : ""}${timing?.alert === "overdue" ? " kitchen-ticket-overdue" : ""}`} key={pedido.id}>
+                  <article className={`kitchen-ticket kitchen-ticket-${statusSlug(pedido.estadoCocina)}${timing?.alert === "near" ? " kitchen-ticket-near" : ""}${timing?.alert === "urgent" ? " kitchen-ticket-urgent" : ""}${timing?.alert === "overdue" ? " kitchen-ticket-overdue" : ""}`} key={pedido.id}>
                     <div className="kitchen-ticket-head">
                       <div>
                         <span className="auth-eyebrow">Pedido #{pedido.id}</span>
@@ -1085,31 +1085,44 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                     </div>
 
                     {timing && (
-                      <div className={`kitchen-timing kitchen-timing-${timing.phase}`}>
-                        {timing.phase === "waiting" && <p>Espera antes de preparación: <strong>{timing.waitMinutes === null ? "Sin dato" : formatKitchenElapsed(timing.waitMinutes)}</strong></p>}
+                      <div className={`kitchen-timing kitchen-timing-${timing.phase} kitchen-timing-${timing.alert}`}>
+                        {timing.phase === "waiting" && (
+                          <div className="kitchen-timing-summary">
+                            <span>Espera antes de preparación</span>
+                            <strong className="kitchen-clock">{timing.waitSeconds === null ? "--:--" : formatKitchenClock(timing.waitSeconds)}</strong>
+                          </div>
+                        )}
                         {timing.phase === "preparing" && (
                           <>
-                            <div className="kitchen-timing-row">
-                              <span>Preparación: <strong>{timing.preparationMinutes === null ? "Sin hora de inicio" : formatKitchenElapsed(timing.preparationMinutes)}</strong></span>
-                              <span>{timing.remainingMinutes === null ? "Sin hora de inicio o estimación" : timing.alert === "overdue" ? "Tiempo agotado" : `Restan ${formatKitchenElapsed(timing.remainingMinutes)}`}</span>
+                            <div className="kitchen-timing-head">
+                              <span>Tiempo restante</span>
+                              <span className="kitchen-timing-state">{timing.alert === "overdue" ? "Demorado" : timing.alert === "near" || timing.alert === "urgent" ? "Por vencer" : "En preparación"}</span>
                             </div>
+                            <strong className="kitchen-clock kitchen-clock-primary">{timing.remainingSeconds === null ? "--:--" : formatKitchenClock(timing.remainingSeconds)}</strong>
+                            {timing.alert === "overdue" && timing.overdueSeconds !== null && <span className="kitchen-overdue-note">Excedido por +{formatKitchenClock(timing.overdueSeconds)}</span>}
                             {timing.progressPercent !== null && (
-                              <div className="kitchen-progress" role="progressbar" aria-label={`Progreso de preparación del pedido ${pedido.id}`} aria-valuenow={timing.progressPercent} aria-valuemin={0} aria-valuemax={100}>
+                              <div className="kitchen-progress" role="progressbar" aria-label={`Progreso de preparación del pedido ${pedido.id}`} aria-valuenow={Math.floor(timing.progressPercent)} aria-valuemin={0} aria-valuemax={100}>
                                 <span style={{ width: `${timing.progressPercent}%` }} />
                               </div>
                             )}
+                            <div className="kitchen-timing-metrics">
+                              <span>Estimado <strong>{pedido.preparacionEstimadaMinutos === null ? "Sin estimar" : formatKitchenClock(pedido.preparacionEstimadaMinutos * 60)}</strong></span>
+                              <span>Transcurrido <strong>{timing.preparationSeconds === null ? "Sin hora de inicio" : formatKitchenClock(timing.preparationSeconds)}</strong></span>
+                            </div>
                           </>
                         )}
-                        {(timing.phase === "pickup" || timing.phase === "delivered") && <p>Preparación final: <strong>{timing.finalPreparationMinutes === null ? "No registrada" : formatKitchenElapsed(timing.finalPreparationMinutes)}</strong></p>}
-                        {timing.phase === "pickup" && <p>Espera de retiro: <strong>{timing.pickupMinutes === null ? "Sin dato" : formatKitchenElapsed(timing.pickupMinutes)}</strong></p>}
+                        {(timing.phase === "pickup" || timing.phase === "delivered") && (
+                          <div className="kitchen-timing-metrics">
+                            <span>Preparación final <strong>{timing.finalPreparationSeconds === null ? "No registrada" : formatKitchenClock(timing.finalPreparationSeconds)}</strong></span>
+                            {timing.phase === "pickup" && <span>Espera de retiro <strong>{timing.pickupSeconds === null ? "Sin dato" : formatKitchenClock(timing.pickupSeconds)}</strong></span>}
+                          </div>
+                        )}
                       </div>
                     )}
-                    {timing?.alert === "near" && <p className="kitchen-wait-alert near">La preparación llegó al 70 % del tiempo estimado.</p>}
-                    {timing?.alert === "overdue" && <p className="kitchen-wait-alert">La preparación superó el tiempo estimado.</p>}
 
                     {(pending || preparing) && (
                       <div className="kitchen-estimate-control">
-                        <strong>Tiempo estimado de preparación</strong>
+                        <div className="kitchen-estimate-heading"><strong>{pending ? "Estimado al iniciar" : "Estimado actual"}</strong><span>{preparing ? `${pedido.preparacionEstimadaMinutos ?? DEFAULT_PREPARATION_ESTIMATE_MINUTES} min` : estimateText.trim() ? `${estimateText} min` : "Sin seleccionar"}</span></div>
                         <div className="kitchen-estimate-options" role="group" aria-label={`Tiempo estimado del pedido ${pedido.id}`}>
                           {PREPARATION_ESTIMATE_OPTIONS.map((minutes) => (
                             <button className={`kitchen-estimate-chip${estimateText === String(minutes) ? " active" : ""}`}
@@ -1125,7 +1138,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                               expected: current[pedido.id] ? current[pedido.id].expected : pedido.preparacionEstimadaMinutos
                             } }))}>Otro</button>
                         </div>
-                        <div className="kitchen-estimate-row">
+                        {(customEstimate || preparing) && <div className="kitchen-estimate-row">
                           {customEstimate && <input aria-label={`Minutos personalizados para pedido ${pedido.id}`} type="number" min={5} max={60} step={1} value={estimateText}
                             onChange={(event) => setKitchenEstimateInputs((current) => ({ ...current, [pedido.id]: {
                               value: event.target.value,
@@ -1134,7 +1147,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                           {preparing && <button className="btn" type="button" disabled={!estimateValid || selectedEstimate === pedido.preparacionEstimadaMinutos}
                             onClick={() => updateKitchenStatus(pedido.id, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken,
                               { ...estimateOptions, preparacionEstimadaMinutosEsperados: estimateDraft ? estimateDraft.expected : pedido.preparacionEstimadaMinutos })}>Guardar tiempo</button>}
-                        </div>
+                        </div>}
                         {customEstimate && <small>Elegí entre 5 y 60 minutos.</small>}
                       </div>
                     )}
