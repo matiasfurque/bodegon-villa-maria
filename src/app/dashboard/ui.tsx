@@ -1109,16 +1109,23 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
 
                     {(pending || preparing) && (
                       <div className="kitchen-estimate-control">
-                        <label htmlFor={`kitchen-estimate-${pedido.id}`}>Tiempo estimado de preparación</label>
-                        <div className="kitchen-estimate-row">
-                          <select id={`kitchen-estimate-${pedido.id}`} value={customEstimate ? "custom" : estimateText}
-                            onChange={(event) => setKitchenEstimateInputs((current) => ({ ...current, [pedido.id]: {
-                              value: event.target.value === "custom" ? "5" : event.target.value,
+                        <strong>Tiempo estimado de preparación</strong>
+                        <div className="kitchen-estimate-options" role="group" aria-label={`Tiempo estimado del pedido ${pedido.id}`}>
+                          {PREPARATION_ESTIMATE_OPTIONS.map((minutes) => (
+                            <button className={`kitchen-estimate-chip${estimateText === String(minutes) ? " active" : ""}`}
+                              aria-pressed={estimateText === String(minutes)} key={minutes} type="button"
+                              onClick={() => setKitchenEstimateInputs((current) => ({ ...current, [pedido.id]: {
+                                value: String(minutes),
+                                expected: current[pedido.id] ? current[pedido.id].expected : pedido.preparacionEstimadaMinutos
+                              } }))}>{minutes} min</button>
+                          ))}
+                          <button className={`kitchen-estimate-chip${customEstimate ? " active" : ""}`} aria-pressed={customEstimate} type="button"
+                            onClick={() => setKitchenEstimateInputs((current) => ({ ...current, [pedido.id]: {
+                              value: customEstimate ? estimateText : "5",
                               expected: current[pedido.id] ? current[pedido.id].expected : pedido.preparacionEstimadaMinutos
-                            } }))}>
-                            {PREPARATION_ESTIMATE_OPTIONS.map((minutes) => <option key={minutes} value={minutes}>{minutes} min</option>)}
-                            <option value="custom">Personalizado</option>
-                          </select>
+                            } }))}>Otro</button>
+                        </div>
+                        <div className="kitchen-estimate-row">
                           {customEstimate && <input aria-label={`Minutos personalizados para pedido ${pedido.id}`} type="number" min={5} max={60} step={1} value={estimateText}
                             onChange={(event) => setKitchenEstimateInputs((current) => ({ ...current, [pedido.id]: {
                               value: event.target.value,
