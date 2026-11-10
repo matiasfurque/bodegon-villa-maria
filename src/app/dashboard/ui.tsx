@@ -9,7 +9,8 @@ import { readPendingAccountClose, savePendingAccountClose } from "@/modules/acco
 import type { PendingAccountClose } from "@/modules/accounts/account-pending";
 import { readPendingOrderDraft, savePendingOrderDraft } from "@/modules/orders/order-draft";
 import type { OrderAttention, OrderDraftItem, PendingOrderCreation } from "@/modules/orders/order-draft";
-import { DEFAULT_KITCHEN_WAIT_MINUTES, formatKitchenElapsed, KITCHEN_WAIT_OPTIONS, kitchenElapsedMinutes } from "./kitchen-time";
+import { DEFAULT_PREPARATION_ESTIMATE_MINUTES, PREPARATION_ESTIMATE_OPTIONS, validPreparationEstimate } from "@/modules/orders/preparation-estimate";
+import { formatKitchenElapsed, kitchenTiming } from "./kitchen-time";
 
 type Role = { id: number; nombre: string };
 type PermissionCode = "inicio.ver" | "operaciones.gestionar" | "cocina.gestionar" | "productos.gestionar" | "usuarios.gestionar" | "reportes.ver" | "historial.ver";
@@ -20,7 +21,7 @@ type Mesa = { id: number; numero: number; descripcion?: string | null; capacidad
 type Categoria = { id: number; nombre: string; orden?: number | null; visible: boolean };
 type Producto = { id: number; nombre: string; descripcion?: string | null; precio: string; activo: boolean; visibleMenu: boolean; categoriaId: number; categoria: Categoria };
 type PedidoItem = { id: number; productoId: number; cantidad: number; precioUnitario: string; subtotal: string; observacion?: string | null; anulado: boolean; motivoAnulacion?: string | null; producto: Producto };
-type Pedido = { id: number; mesaId: number; atencionToken: string | null; revisionContenido: number; estado: string; estadoCodigo?: string; estadoActivo?: boolean; estadoCocina: string; estadoCocinaCodigo?: string; estadoCocinaPermiteAgregarItems?: boolean; estadoCocinaVisible?: boolean; estadoCocinaNotificaMozo?: boolean; observacion?: string | null; fechaHora: string; mesa?: Mesa; usuario?: { nombre: string; apellido: string; usuario: string }; items: PedidoItem[] };
+type Pedido = { id: number; mesaId: number; atencionToken: string | null; revisionContenido: number; estado: string; estadoCodigo?: string; estadoActivo?: boolean; estadoCocina: string; estadoCocinaCodigo?: string; estadoCocinaPermiteAgregarItems?: boolean; estadoCocinaVisible?: boolean; estadoCocinaNotificaMozo?: boolean; observacion?: string | null; fechaHora: string; preparacionEstimadaMinutos: number | null; preparacionIniciadaEn: string | null; preparacionFinalizadaEn: string | null; mesa?: Mesa; usuario?: { nombre: string; apellido: string; usuario: string }; items: PedidoItem[] };
 
 function belongsToCurrentAttention(pedido: Pedido, mesa: Mesa | null | undefined) {
   return Boolean(mesa?.atencionToken && pedido.atencionToken === mesa.atencionToken);
@@ -47,7 +48,6 @@ const tabs: Array<{ label: string; permiso: PermissionCode }> = [
 const emptyCatalogs: Catalogs = { metodosPago: [], cocinaEstados: [] };
 const OPERATIONAL_REFRESH_MS = 7000;
 const OPERATIONAL_REFRESH_DEDUPE_MS = 2000;
-const KITCHEN_WAIT_STORAGE_KEY = "bvm-kitchen-wait-minutes";
 
 class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -108,7 +108,7 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   const [userRoleFilter, setUserRoleFilter] = useState("todos");
   const [userStatusFilter, setUserStatusFilter] = useState("todos");
   const [kitchenStatusFilter, setKitchenStatusFilter] = useState("Activas");
-  const [kitchenWaitMinutes, setKitchenWaitMinutes] = useState<number>(DEFAULT_KITCHEN_WAIT_MINUTES);
+  const [kitchenEstimateInputs, setKitchenEstimateInputs] = useState<Record<number, { value: string; expected: number | null }>>({});
   const [kitchenNow, setKitchenNow] = useState<number | null>(null);
   const [historyMesaId, setHistoryMesaId] = useState("");
   const [historyFrom, setHistoryFrom] = useState("");
@@ -465,19 +465,10 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }, []);
 
   useEffect(() => {
-    try {
-      const stored = Number(window.localStorage.getItem(KITCHEN_WAIT_STORAGE_KEY));
-      if (KITCHEN_WAIT_OPTIONS.some((option) => option === stored)) setKitchenWaitMinutes(stored);
-    } catch {
-      // El umbral predeterminado sigue disponible si el navegador bloquea el almacenamiento.
-    }
-  }, []);
-
-  useEffect(() => {
     if (active !== "Cocina") return;
     const updateClock = () => setKitchenNow(Date.now());
     updateClock();
-    const interval = window.setInterval(updateClock, 30_000);
+    const interval = window.setInterval(updateClock, 15_000);
     document.addEventListener("visibilitychange", updateClock);
     return () => {
       window.clearInterval(interval);
@@ -705,19 +696,22 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
   }
 
   async function updateKitchenStatus(pedidoId: number, estadoCocina: string, estadoCocinaEsperado: string,
-    atencionToken: string | null, revisionContenidoEsperada?: number) {
+    atencionToken: string | null, options: { revisionContenidoEsperada?: number; preparacionEstimadaMinutos?: number;
+      preparacionEstimadaMinutosEsperados?: number | null } = {}) {
     try {
       actionRunningRef.current = true;
       localMutationVersionRef.current += 1;
       setMessage("");
       const updated: Pedido = await api(`/api/pedidos/${pedidoId}`, { method: "PATCH",
-        body: JSON.stringify({ estadoCocina, estadoCocinaEsperado, atencionToken, revisionContenidoEsperada }) });
+        body: JSON.stringify({ estadoCocina, estadoCocinaEsperado, atencionToken, ...options }) });
       setAllPedidos((current) => current.map((pedido) => pedido.id === pedidoId ? updated : pedido));
       setPedidos((current) => current.map((pedido) => pedido.id === pedidoId ? updated : pedido));
+      setKitchenEstimateInputs((current) => { const next = { ...current }; delete next[pedidoId]; return next; });
       setMessage("Pedido actualizado");
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         await loadOperationalData().catch(() => {});
+        setKitchenEstimateInputs((current) => { const next = { ...current }; delete next[pedidoId]; return next; });
       }
       setMessage(error instanceof Error ? error.message : "No se pudo actualizar el pedido");
     } finally {
@@ -1052,19 +1046,6 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                   </button>
                 ))}
               </div>
-              <div className="kitchen-wait-control">
-                <span>Avisar después de</span>
-                <PrettySelect
-                  ariaLabel="Tiempo de espera para avisar en Cocina"
-                  value={kitchenWaitMinutes}
-                  options={KITCHEN_WAIT_OPTIONS.map((minutes) => ({ value: minutes, label: `${minutes} min` }))}
-                  onChange={(value) => {
-                    const minutes = Number(value);
-                    setKitchenWaitMinutes(minutes);
-                    try { window.localStorage.setItem(KITCHEN_WAIT_STORAGE_KEY, String(minutes)); } catch { /* Se conserva el ajuste en esta sesión. */ }
-                  }}
-                />
-              </div>
             </div>
           </div>
 
@@ -1080,11 +1061,18 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                 const reviewedRevision = reviewedKitchenRevisions[pedido.id];
                 const needsReview = reviewedRevision !== undefined && reviewedRevision !== pedido.revisionContenido;
                 const readyBlocked = reviewedRevision === undefined || needsReview;
-                const elapsedMinutes = kitchenNow === null ? null : kitchenElapsedMinutes(pedido.fechaHora, kitchenNow);
-                const overdue = elapsedMinutes !== null && elapsedMinutes >= kitchenWaitMinutes && (pedido.estadoCocinaVisible ?? pedido.estadoCocina !== "Entregado");
+                const timing = kitchenNow === null ? null : kitchenTiming(pedido, kitchenNow);
+                const estimateDraft = kitchenEstimateInputs[pedido.id];
+                const estimateText = estimateDraft?.value ?? String(pedido.preparacionEstimadaMinutos ?? DEFAULT_PREPARATION_ESTIMATE_MINUTES);
+                const selectedEstimate = Number(estimateText);
+                const estimateValid = estimateText.trim() !== "" && validPreparationEstimate(selectedEstimate);
+                const customEstimate = !PREPARATION_ESTIMATE_OPTIONS.some((option) => String(option) === estimateText);
+                const pending = pedido.estadoCocina === "Pendiente";
+                const preparing = pedido.estadoCocina === "En preparacion";
+                const estimateOptions = { preparacionEstimadaMinutos: selectedEstimate };
 
                 return (
-                  <article className={`kitchen-ticket kitchen-ticket-${statusSlug(pedido.estadoCocina)}${overdue ? " kitchen-ticket-overdue" : ""}`} key={pedido.id}>
+                  <article className={`kitchen-ticket kitchen-ticket-${statusSlug(pedido.estadoCocina)}${timing?.alert === "near" ? " kitchen-ticket-near" : ""}${timing?.alert === "overdue" ? " kitchen-ticket-overdue" : ""}`} key={pedido.id}>
                     <div className="kitchen-ticket-head">
                       <div>
                         <span className="auth-eyebrow">Pedido #{pedido.id}</span>
@@ -1093,14 +1081,56 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                       </div>
                       <div className="kitchen-ticket-indicators">
                         <span className={`status kitchen-${statusSlug(pedido.estadoCocina)}`}>{pedido.estadoCocina}</span>
-                        {elapsedMinutes !== null && (
-                          <span className={`kitchen-elapsed${overdue ? " overdue" : ""}`} aria-label={`Tiempo transcurrido desde el pedido: ${formatKitchenElapsed(elapsedMinutes)}`}>
-                            Hace {formatKitchenElapsed(elapsedMinutes)}
-                          </span>
-                        )}
                       </div>
                     </div>
-                    {overdue && <p className="kitchen-wait-alert">{pedido.estadoCocina === "Listo" ? "Esperando retiro" : "Superó el tiempo de espera"}</p>}
+
+                    {timing && (
+                      <div className={`kitchen-timing kitchen-timing-${timing.phase}`}>
+                        {timing.phase === "waiting" && <p>Espera antes de preparación: <strong>{timing.waitMinutes === null ? "Sin dato" : formatKitchenElapsed(timing.waitMinutes)}</strong></p>}
+                        {timing.phase === "preparing" && (
+                          <>
+                            <div className="kitchen-timing-row">
+                              <span>Preparación: <strong>{timing.preparationMinutes === null ? "Sin hora de inicio" : formatKitchenElapsed(timing.preparationMinutes)}</strong></span>
+                              <span>{timing.remainingMinutes === null ? "Sin hora de inicio o estimación" : timing.alert === "overdue" ? "Tiempo agotado" : `Restan ${formatKitchenElapsed(timing.remainingMinutes)}`}</span>
+                            </div>
+                            {timing.progressPercent !== null && (
+                              <div className="kitchen-progress" role="progressbar" aria-label={`Progreso de preparación del pedido ${pedido.id}`} aria-valuenow={timing.progressPercent} aria-valuemin={0} aria-valuemax={100}>
+                                <span style={{ width: `${timing.progressPercent}%` }} />
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {(timing.phase === "pickup" || timing.phase === "delivered") && <p>Preparación final: <strong>{timing.finalPreparationMinutes === null ? "No registrada" : formatKitchenElapsed(timing.finalPreparationMinutes)}</strong></p>}
+                        {timing.phase === "pickup" && <p>Espera de retiro: <strong>{timing.pickupMinutes === null ? "Sin dato" : formatKitchenElapsed(timing.pickupMinutes)}</strong></p>}
+                      </div>
+                    )}
+                    {timing?.alert === "near" && <p className="kitchen-wait-alert near">La preparación llegó al 70 % del tiempo estimado.</p>}
+                    {timing?.alert === "overdue" && <p className="kitchen-wait-alert">La preparación superó el tiempo estimado.</p>}
+
+                    {(pending || preparing) && (
+                      <div className="kitchen-estimate-control">
+                        <label htmlFor={`kitchen-estimate-${pedido.id}`}>Tiempo estimado de preparación</label>
+                        <div className="kitchen-estimate-row">
+                          <select id={`kitchen-estimate-${pedido.id}`} value={customEstimate ? "custom" : estimateText}
+                            onChange={(event) => setKitchenEstimateInputs((current) => ({ ...current, [pedido.id]: {
+                              value: event.target.value === "custom" ? "5" : event.target.value,
+                              expected: current[pedido.id] ? current[pedido.id].expected : pedido.preparacionEstimadaMinutos
+                            } }))}>
+                            {PREPARATION_ESTIMATE_OPTIONS.map((minutes) => <option key={minutes} value={minutes}>{minutes} min</option>)}
+                            <option value="custom">Personalizado</option>
+                          </select>
+                          {customEstimate && <input aria-label={`Minutos personalizados para pedido ${pedido.id}`} type="number" min={5} max={60} step={1} value={estimateText}
+                            onChange={(event) => setKitchenEstimateInputs((current) => ({ ...current, [pedido.id]: {
+                              value: event.target.value,
+                              expected: current[pedido.id] ? current[pedido.id].expected : pedido.preparacionEstimadaMinutos
+                            } }))} />}
+                          {preparing && <button className="btn" type="button" disabled={!estimateValid || selectedEstimate === pedido.preparacionEstimadaMinutos}
+                            onClick={() => updateKitchenStatus(pedido.id, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken,
+                              { ...estimateOptions, preparacionEstimadaMinutosEsperados: estimateDraft ? estimateDraft.expected : pedido.preparacionEstimadaMinutos })}>Guardar tiempo</button>}
+                        </div>
+                        {customEstimate && <small>Elegí entre 5 y 60 minutos.</small>}
+                      </div>
+                    )}
 
                     <div className="kitchen-items">
                       {pedido.observacion && <p className="muted">Nota del pedido: {pedido.observacion}</p>}
@@ -1127,10 +1157,11 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                       {catalogs.cocinaEstados.map((estado) => (
                         <button
                           className={`btn ${pedido.estadoCocina === estado.nombre ? "primary" : ""}`}
-                          disabled={pedido.estadoCocina === estado.nombre || (estado.nombre === "Listo" && readyBlocked)}
+                          disabled={pedido.estadoCocina === estado.nombre || (estado.nombre === "Listo" && readyBlocked) || (pending && estado.nombre === "En preparacion" && !estimateValid)}
                           key={estado.codigo}
                           type="button"
-                          onClick={() => updateKitchenStatus(pedido.id, estado.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken, estado.nombre === "Listo" ? reviewedRevision : undefined)}
+                          onClick={() => updateKitchenStatus(pedido.id, estado.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken,
+                            { ...(estado.nombre === "Listo" ? { revisionContenidoEsperada: reviewedRevision } : {}), ...(pending && estado.nombre === "En preparacion" ? estimateOptions : {}) })}
                         >
                           {estado.nombre}
                         </button>
@@ -1138,7 +1169,8 @@ export default function DashboardClient({ user }: { user: AuthUser }) {
                     </div>
 
                     {nextStatus && pedido.estadoCocina !== nextStatus.nombre && nextStatus.visibleCocina && (
-                      <button className="btn primary kitchen-next" type="button" disabled={nextStatus.nombre === "Listo" && readyBlocked} onClick={() => updateKitchenStatus(pedido.id, nextStatus.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken, nextStatus.nombre === "Listo" ? reviewedRevision : undefined)}>
+                      <button className="btn primary kitchen-next" type="button" disabled={(nextStatus.nombre === "Listo" && readyBlocked) || (pending && nextStatus.nombre === "En preparacion" && !estimateValid)} onClick={() => updateKitchenStatus(pedido.id, nextStatus.codigo, pedido.estadoCocinaCodigo || pedido.estadoCocina, pedido.atencionToken,
+                        { ...(nextStatus.nombre === "Listo" ? { revisionContenidoEsperada: reviewedRevision } : {}), ...(pending && nextStatus.nombre === "En preparacion" ? estimateOptions : {}) })}>
                         Pasar a {nextStatus.nombre}
                       </button>
                     )}

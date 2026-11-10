@@ -195,6 +195,9 @@ model Pedido {
   solicitudHash String?
   revisionContenido Int @default(0)
   fechaHora   DateTime  @default(now())
+  preparacionEstimadaMinutos Int?
+  preparacionIniciadaEn DateTime?
+  preparacionFinalizadaEn DateTime?
   estadoId    Int       @default(1)
   estadoCocinaId Int    @default(1)
   observacion String?

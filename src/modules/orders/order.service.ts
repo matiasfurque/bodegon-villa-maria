@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { setOperationLockTimeout } from "@/lib/transaction-lock";
 import { tableRepository } from "@/modules/tables/table.repository";
 import { orderRepository } from "./order.repository";
+import { DEFAULT_PREPARATION_ESTIMATE_MINUTES, validPreparationEstimate } from "./preparation-estimate";
 import type {
   AddOrderItemInput,
   CancelOrderItemInput,
@@ -211,11 +212,40 @@ export const orderService = {
         }
       }
 
+      const startsPreparation = pedido.estadoCocina.codigo === CODES.cocina.pendiente &&
+        estadoCocina?.codigo === CODES.cocina.enPreparacion;
+      const editsEstimate = pedido.estadoCocina.codigo === CODES.cocina.enPreparacion &&
+        estadoCocina?.codigo === CODES.cocina.enPreparacion &&
+        data.preparacionEstimadaMinutos !== undefined;
+      const hasEstimate = data.preparacionEstimadaMinutos !== undefined;
+      if (hasEstimate && !startsPreparation && !editsEstimate) {
+        return { error: "El tiempo estimado solo puede establecerse al iniciar o durante la preparación.", status: 400 };
+      }
+      const estimate = startsPreparation && !hasEstimate
+        ? DEFAULT_PREPARATION_ESTIMATE_MINUTES
+        : data.preparacionEstimadaMinutos;
+      if ((startsPreparation || editsEstimate) && !validPreparationEstimate(estimate)) {
+        return { error: "El tiempo estimado debe ser un número entero entre 5 y 60 minutos.", status: 400 };
+      }
+      if (editsEstimate) {
+        const expected = data.preparacionEstimadaMinutosEsperados;
+        if (expected !== null && !validPreparationEstimate(expected)) {
+          return { error: "Indicá el tiempo estimado que estabas viendo.", status: 400 };
+        }
+        if (expected !== (pedido.preparacionEstimadaMinutos ?? null)) {
+          return { error: "El tiempo estimado cambió. Actualizá el pedido e intentá nuevamente.", status: 409 };
+        }
+      }
+
       const observationChanged = data.observacion !== undefined && data.observacion !== pedido.observacion;
 
       const updated = await orderRepository.update(tx, pedidoId, {
         estadoCocinaId: estadoCocina?.id,
         observacion: data.observacion ?? pedido.observacion,
+        ...(startsPreparation ? { preparacionEstimadaMinutos: estimate as number, preparacionIniciadaEn: new Date() } : {}),
+        ...(editsEstimate ? { preparacionEstimadaMinutos: estimate as number } : {}),
+        ...(pedido.estadoCocina.codigo === CODES.cocina.enPreparacion && estadoCocina?.codigo === CODES.cocina.listo
+          ? { preparacionFinalizadaEn: new Date() } : {}),
         ...(observationChanged ? { revisionContenido: { increment: 1 } } : {})
       });
       return { updated };

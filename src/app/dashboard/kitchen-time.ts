@@ -13,3 +13,45 @@ export function formatKitchenElapsed(minutes: number): string {
   const remainder = minutes % 60;
   return remainder ? `${hours} h ${remainder} min` : `${hours} h`;
 }
+
+type KitchenTimingInput = {
+  estadoCocina: string;
+  fechaHora: string;
+  preparacionEstimadaMinutos: number | null;
+  preparacionIniciadaEn: string | null;
+  preparacionFinalizadaEn: string | null;
+};
+
+function elapsedMs(from: string | null, to: number): number | null {
+  if (!from) return null;
+  const start = Date.parse(from);
+  return Number.isFinite(start) && Number.isFinite(to) ? Math.max(0, to - start) : null;
+}
+
+export function kitchenTiming(pedido: KitchenTimingInput, now: number) {
+  const status = pedido.estadoCocina;
+  const preparing = status === "En preparacion" || status === "COCINA_EN_PREPARACION";
+  const pending = status === "Pendiente" || status === "COCINA_PENDIENTE";
+  const ready = status === "Listo" || status === "COCINA_LISTO";
+  const preparationMs = elapsedMs(pedido.preparacionIniciadaEn,
+    pedido.preparacionFinalizadaEn ? Date.parse(pedido.preparacionFinalizadaEn) : now);
+  const pickupMs = ready ? elapsedMs(pedido.preparacionFinalizadaEn, now) : null;
+  const estimateMs = pedido.preparacionEstimadaMinutos !== null
+    ? pedido.preparacionEstimadaMinutos * 60_000 : null;
+  const progress = preparationMs !== null && estimateMs !== null && estimateMs > 0
+    ? preparationMs / estimateMs : null;
+
+  return {
+    phase: pending ? "waiting" : preparing ? "preparing" : ready ? "pickup" : "delivered",
+    waitMinutes: pending ? kitchenElapsedMinutes(pedido.fechaHora, now) : null,
+    preparationMinutes: preparationMs === null ? null : Math.floor(preparationMs / 60_000),
+    finalPreparationMinutes: preparationMs === null || !pedido.preparacionFinalizadaEn
+      ? null : Math.ceil(preparationMs / 60_000),
+    pickupMinutes: pickupMs === null ? null : Math.floor(pickupMs / 60_000),
+    remainingMinutes: !preparing || estimateMs === null || preparationMs === null
+      ? null : Math.max(0, Math.ceil((estimateMs - preparationMs) / 60_000)),
+    progressPercent: progress === null ? null : Math.min(100, Math.round(progress * 100)),
+    alert: !preparing || progress === null ? "normal" as const :
+      progress >= 1 ? "overdue" as const : progress >= 0.7 ? "near" as const : "normal" as const
+  };
+}
