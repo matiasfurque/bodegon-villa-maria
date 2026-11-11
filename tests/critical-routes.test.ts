@@ -92,6 +92,9 @@ function kitchenTransaction(currentCode: string) {
     estado: pedidoActivo,
     estadoCocina: kitchen(currentCode),
     revisionContenido: 0,
+    preparacionEstimadaMinutos: null as number | null,
+    preparacionIniciadaEn: null as Date | null,
+    preparacionFinalizadaEn: null as Date | null,
     atencionToken: orderToken,
     mesa: { id: 1, estado: mesaOcupada, atencionToken: orderToken },
     usuario: { id: 7, nombre: "Ana", apellido: "Perez", usuario: "ana" },
@@ -101,10 +104,13 @@ function kitchenTransaction(currentCode: string) {
     $queryRaw: vi.fn().mockResolvedValue([{ id: 1 }]),
     pedido: {
       findUnique: vi.fn().mockImplementation(async () => pedido),
-      update: vi.fn().mockImplementation(async ({ data }: { data: { estadoCocinaId?: number; observacion?: string | null; revisionContenido?: { increment: number } } }) => {
+      update: vi.fn().mockImplementation(async ({ data }: { data: { estadoCocinaId?: number; observacion?: string | null; revisionContenido?: { increment: number }; preparacionEstimadaMinutos?: number; preparacionIniciadaEn?: Date; preparacionFinalizadaEn?: Date } }) => {
         const next = kitchenStates.find((state) => state.id === data.estadoCocinaId);
         pedido = { ...pedido, estadoCocina: next || pedido.estadoCocina, observacion: data.observacion ?? pedido.observacion,
-          revisionContenido: pedido.revisionContenido + (data.revisionContenido?.increment || 0) };
+          revisionContenido: pedido.revisionContenido + (data.revisionContenido?.increment || 0),
+          preparacionEstimadaMinutos: data.preparacionEstimadaMinutos ?? pedido.preparacionEstimadaMinutos,
+          preparacionIniciadaEn: data.preparacionIniciadaEn ?? pedido.preparacionIniciadaEn,
+          preparacionFinalizadaEn: data.preparacionFinalizadaEn ?? pedido.preparacionFinalizadaEn };
         return pedido;
       })
     },
@@ -1038,6 +1044,77 @@ describe("OrderService", () => {
     expect(tx.pedido.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ estadoCocinaId: kitchen(to).id })
     }));
+  });
+
+  it("guarda la estimación y el inicio en la misma transición a preparación", async () => {
+    const tx = kitchenTransaction(CODES.cocina.pendiente);
+    const result = await orderService.update(10, { atencionToken: orderToken,
+      estadoCocina: CODES.cocina.enPreparacion, estadoCocinaEsperado: CODES.cocina.pendiente,
+      preparacionEstimadaMinutos: 20 });
+    expect(result).toHaveProperty("updated");
+    expect(tx.pedido.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      preparacionEstimadaMinutos: 20, preparacionIniciadaEn: expect.any(Date)
+    }) }));
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([4, 61, 10.5, "20"])('rechaza estimación inválida %s', async (minutes) => {
+    const tx = kitchenTransaction(CODES.cocina.pendiente);
+    const result = await orderService.update(10, { atencionToken: orderToken,
+      estadoCocina: CODES.cocina.enPreparacion, estadoCocinaEsperado: CODES.cocina.pendiente,
+      preparacionEstimadaMinutos: minutes });
+    expect(result).toMatchObject({ status: 400 });
+    expect(tx.pedido.update).not.toHaveBeenCalled();
+  });
+
+  it("permite editar el tiempo sin reiniciar el reloj y rechaza un cambio desde una vista vieja", async () => {
+    const tx = kitchenTransaction(CODES.cocina.pendiente);
+    const start = await orderService.update(10, { atencionToken: orderToken,
+      estadoCocina: CODES.cocina.enPreparacion, estadoCocinaEsperado: CODES.cocina.pendiente,
+      preparacionEstimadaMinutos: 15 });
+    const originalStart = (start as { updated: { preparacionIniciadaEn: Date } }).updated.preparacionIniciadaEn;
+    const change = await orderService.update(10, { atencionToken: orderToken,
+      estadoCocina: CODES.cocina.enPreparacion, estadoCocinaEsperado: CODES.cocina.enPreparacion,
+      preparacionEstimadaMinutos: 30, preparacionEstimadaMinutosEsperados: 15 });
+    expect(change).toHaveProperty("updated");
+    expect(tx.pedido.update.mock.calls[1][0].data).not.toHaveProperty("preparacionIniciadaEn");
+    expect((change as { updated: { preparacionIniciadaEn: Date } }).updated.preparacionIniciadaEn).toEqual(originalStart);
+    const stale = await orderService.update(10, { atencionToken: orderToken,
+      estadoCocina: CODES.cocina.enPreparacion, estadoCocinaEsperado: CODES.cocina.enPreparacion,
+      preparacionEstimadaMinutos: 20, preparacionEstimadaMinutosEsperados: 15 });
+    expect(stale).toMatchObject({ status: 409 });
+    expect(tx.pedido.update).toHaveBeenCalledTimes(2);
+  });
+
+  it("serializa dos inicios vistos como Pendiente y rechaza el segundo", async () => {
+    const tx = kitchenTransaction(CODES.cocina.pendiente);
+    let previous = Promise.resolve<unknown>(undefined);
+    prismaMock.$transaction.mockImplementation((callback: (client: object) => Promise<unknown>) => {
+      const operation = previous.then(() => callback(tx));
+      previous = operation.catch(() => undefined);
+      return operation;
+    });
+    const input = (minutes: number) => ({ atencionToken: orderToken,
+      estadoCocina: CODES.cocina.enPreparacion, estadoCocinaEsperado: CODES.cocina.pendiente,
+      preparacionEstimadaMinutos: minutes });
+    const [first, second] = await Promise.all([orderService.update(10, input(20)), orderService.update(10, input(30))]);
+    expect(first).toHaveProperty("updated");
+    expect(second).toMatchObject({ status: 409 });
+    expect(tx.pedido.update).toHaveBeenCalledTimes(1);
+    expect(tx.pedido.update.mock.calls[0][0].data.preparacionEstimadaMinutos).toBe(20);
+  });
+
+  it("detiene la preparación al marcar Listo y no altera su inicio", async () => {
+    const tx = kitchenTransaction(CODES.cocina.pendiente);
+    await orderService.update(10, { atencionToken: orderToken,
+      estadoCocina: CODES.cocina.enPreparacion, estadoCocinaEsperado: CODES.cocina.pendiente,
+      preparacionEstimadaMinutos: 10 });
+    const result = await orderService.update(10, { atencionToken: orderToken,
+      estadoCocina: CODES.cocina.listo, estadoCocinaEsperado: CODES.cocina.enPreparacion,
+      revisionContenidoEsperada: 0 });
+    expect(tx.pedido.update.mock.calls[1][0].data).toHaveProperty("preparacionFinalizadaEn", expect.any(Date));
+    expect(tx.pedido.update.mock.calls[1][0].data).not.toHaveProperty("preparacionIniciadaEn");
+    expect(result).toHaveProperty("updated");
   });
 
   it("rechaza una transicion de cocina invalida", async () => {

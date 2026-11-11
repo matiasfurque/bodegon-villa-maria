@@ -44,6 +44,8 @@ export type UpdateOrderInput = {
   estadoCocina?: string | null;
   estadoCocinaEsperado?: string | null;
   revisionContenidoEsperada?: unknown;
+  preparacionEstimadaMinutos?: unknown;
+  preparacionEstimadaMinutosEsperados?: unknown;
   observacion?: string | null;
 };
 
