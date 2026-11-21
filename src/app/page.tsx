@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowUpRight, CalendarDays, Clock, Instagram, MapPin, Utensils } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import PublicMenu from "./public-menu";
+import EditorialHero from "./editorial-hero";
+import heroStyles from "./editorial-hero.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +35,7 @@ export default async function HomePage() {
 
   return (
     <main className="public-shell">
-      <nav className="topbar">
+      <nav className={`topbar ${heroStyles.visualTopbar}`}>
         <div className="brand">Bodegon Villa Maria</div>
         <div className="nav-actions">
           <a className="btn ghost" href="#menu">
@@ -45,24 +47,7 @@ export default async function HomePage() {
         </div>
       </nav>
 
-      <section className="hero">
-        <div className="hero-inner">
-          <p className="eyebrow">Bodegon & cafeteria · Mataderos</p>
-          <h1>Villa Maria</h1>
-          <p>
-            Un espacio con alma portena para comer rico, compartir y quedarse un rato mas.
-            Platos de bodegon, cafeteria y encuentros sociales en Lisandro de la Torre.
-          </p>
-          <div className="nav-actions">
-            <a className="btn primary" href="#menu">
-              Ver menu
-            </a>
-            <a className="btn ghost" href="#contacto">
-              Contacto
-            </a>
-          </div>
-        </div>
-      </section>
+      <EditorialHero />
 
       <section id="menu" className="public-section">
         <div className="section-head">
