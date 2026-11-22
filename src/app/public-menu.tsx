@@ -26,6 +26,8 @@ function productPrice(precio: string | null) {
 export default function PublicMenu({ categorias }: { categorias: MenuCategory[] }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const activeTransition = useRef<ViewTransition | null>(null);
+  const requestedId = useRef<number | null>(categorias.find((categoria) => categoria.productos.length > 0)?.id ?? categorias[0]?.id ?? null);
+  const selectionVersion = useRef(0);
   const [isVisible, setIsVisible] = useState(false);
   const [transitionMode, setTransitionMode] = useState<"initial" | "native" | "fallback">("initial");
   const [selectedId, setSelectedId] = useState<number | null>(categorias.find((categoria) => categoria.productos.length > 0)?.id ?? categorias[0]?.id ?? null);
@@ -48,9 +50,12 @@ export default function PublicMenu({ categorias }: { categorias: MenuCategory[] 
   useEffect(() => () => activeTransition.current?.skipTransition(), []);
 
   function selectCategory(id: number) {
-    if (id === selectedId) return;
+    if (id === requestedId.current) return;
+    requestedId.current = id;
+    const version = ++selectionVersion.current;
 
     activeTransition.current?.skipTransition();
+    if (id === selectedId) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !document.startViewTransition) {
       setTransitionMode("fallback");
       setSelectedId(id);
@@ -58,6 +63,7 @@ export default function PublicMenu({ categorias }: { categorias: MenuCategory[] 
     }
 
     const transition = document.startViewTransition(() => {
+      if (version !== selectionVersion.current) return;
       flushSync(() => {
         setTransitionMode("native");
         setSelectedId(id);

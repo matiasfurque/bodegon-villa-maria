@@ -874,6 +874,10 @@ button:disabled {
   animation: none;
 }
 
+::view-transition {
+  pointer-events: none;
+}
+
 ::view-transition-group(menu-active-marker) {
   animation-duration: 300ms;
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
