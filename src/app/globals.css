@@ -736,20 +736,19 @@ button:disabled {
 
 .digital-menu-products {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(10px, 1.2vw, 14px);
 }
 
 .digital-menu-product {
   position: relative;
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-columns: 28px minmax(0, 1fr);
   grid-template-rows: 1fr auto;
-  column-gap: 17px;
-  row-gap: 26px;
+  column-gap: 12px;
+  row-gap: 15px;
   min-width: 0;
-  min-height: 192px;
-  padding: 24px;
+  padding: clamp(18px, 1.55vw, 21px);
   border: 1px solid #dfcfb9;
   border-radius: 19px;
   background: #fffaf0;
@@ -760,8 +759,8 @@ button:disabled {
 .digital-menu-product::before {
   position: absolute;
   top: 0;
-  right: 24px;
-  left: 79px;
+  right: 21px;
+  left: 61px;
   height: 2px;
   background: var(--brand-red);
   content: "";
@@ -774,7 +773,7 @@ button:disabled {
   grid-column: 1;
   color: var(--brand-red);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 18px;
+  font-size: 16px;
   font-style: italic;
   line-height: 1.2;
 }
@@ -788,7 +787,7 @@ button:disabled {
   margin: 0;
   color: var(--accent-strong);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(21px, 2.1vw, 27px);
+  font-size: clamp(20px, 1.75vw, 24px);
   font-weight: 500;
   letter-spacing: -0.025em;
   line-height: 1.16;
@@ -797,7 +796,7 @@ button:disabled {
 
 .digital-menu-product p {
   max-width: 46ch;
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.55;
@@ -808,10 +807,10 @@ button:disabled {
   grid-column: 2;
   align-self: end;
   border-top: 1px solid #d6c5ab;
-  padding-top: 13px;
+  padding-top: 9px;
   color: var(--brand-red);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.1;
   overflow-wrap: anywhere;
@@ -950,13 +949,12 @@ button:disabled {
   }
 
   .digital-menu-product {
-    min-height: 160px;
-    grid-template-columns: 30px minmax(0, 1fr);
-    column-gap: 13px;
+    grid-template-columns: 26px minmax(0, 1fr);
+    column-gap: 11px;
   }
 
   .digital-menu-product::before {
-    left: 63px;
+    left: 55px;
   }
 }
 
@@ -2707,8 +2705,7 @@ button:disabled {
   }
 
   .digital-menu-product {
-    min-height: 148px;
-    padding: 19px;
+    padding: clamp(16px, 4.5vw, 19px);
   }
 
   .digital-menu-selection {
