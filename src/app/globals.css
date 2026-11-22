@@ -860,12 +860,12 @@ button:disabled {
   animation-delay: 120ms;
 }
 
-.digital-menu[data-transition-mode="native"] .digital-menu-selection-copy {
+.digital-menu-selection-copy {
   view-transition-name: menu-selection;
 }
 
-.digital-menu[data-transition-mode="native"] .digital-menu-products,
-.digital-menu[data-transition-mode="native"] .digital-menu-empty {
+.digital-menu-products,
+.digital-menu-empty {
   view-transition-name: menu-products;
 }
 
@@ -925,6 +925,11 @@ button:disabled {
   .digital-menu-categories {
     flex-wrap: nowrap;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .digital-menu-categories::-webkit-scrollbar {
+    display: none;
   }
 
   .digital-menu-selection {
