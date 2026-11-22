@@ -746,9 +746,9 @@ button:disabled {
   grid-template-columns: 28px minmax(0, 1fr);
   grid-template-rows: 1fr auto;
   column-gap: 12px;
-  row-gap: 15px;
+  row-gap: 12px;
   min-width: 0;
-  padding: clamp(18px, 1.55vw, 21px);
+  padding: clamp(16px, 1.3vw, 18px);
   border: 1px solid #dfcfb9;
   border-radius: 19px;
   background: #fffaf0;
@@ -759,8 +759,8 @@ button:disabled {
 .digital-menu-product::before {
   position: absolute;
   top: 0;
-  right: 21px;
-  left: 61px;
+  right: 18px;
+  left: 58px;
   height: 2px;
   background: var(--brand-red);
   content: "";
@@ -807,7 +807,7 @@ button:disabled {
   grid-column: 2;
   align-self: end;
   border-top: 1px solid #d6c5ab;
-  padding-top: 9px;
+  padding-top: 7px;
   color: var(--brand-red);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 18px;
