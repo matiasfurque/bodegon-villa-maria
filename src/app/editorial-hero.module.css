@@ -220,7 +220,7 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(9, 24, 17, 0.63), transparent 21%, transparent 72%, rgba(9, 24, 17, 0.66)),
+    linear-gradient(180deg, rgba(9, 24, 17, 0.44), transparent 26%),
     linear-gradient(90deg, rgba(8, 28, 20, 0.12), transparent 26%);
   pointer-events: none;
 }
@@ -230,22 +230,6 @@
   inset: 76px 32px 34px;
   border: 1px solid rgba(255, 248, 232, 0.46);
   pointer-events: none;
-}
-
-.photoLabel {
-  position: absolute;
-  right: 53px;
-  bottom: 49px;
-  left: 53px;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 0;
-  color: #fffaf0;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .photoCorner {
@@ -263,25 +247,6 @@
   font-family: Arial, Helvetica, sans-serif;
   font-size: 9px;
   letter-spacing: 0.21em;
-}
-
-.scrollCue {
-  position: absolute;
-  z-index: 2;
-  right: 50%;
-  bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 15px;
-  border-radius: 100px;
-  background: #bf613e;
-  color: #fff9ed;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transform: translateX(50%);
 }
 
 .bridge {
@@ -406,10 +371,9 @@
 
   .photoPanel { grid-row: 1; }
   .photo { object-position: center 38%; }
-  .photoShade { background: linear-gradient(180deg, rgba(9, 24, 17, 0.65), transparent 27%, transparent 62%, rgba(9, 24, 17, 0.25)); }
+  .photoShade { background: linear-gradient(180deg, rgba(9, 24, 17, 0.45), transparent 30%); }
   .photoOutline { inset: 70px 18px 20px; }
   .photoCorner { top: 85px; right: 32px; }
-  .photoLabel { right: 29px; bottom: 30px; left: 29px; }
 
   .story {
     grid-row: 2;
@@ -423,7 +387,6 @@
   .edition { margin-bottom: 19px; }
   .title { font-size: clamp(68px, 16vw, 103px); }
   .description { max-width: 560px; }
-  .scrollCue { display: none; }
 
   .bridgeInner {
     grid-template-columns: minmax(0, 1fr) 140px;
@@ -452,7 +415,6 @@
   .menuCta { min-height: 54px; min-width: 166px; padding-left: 17px; }
   .ctaIcon { flex-basis: 40px; width: 40px; height: 40px; }
   .storyBottom { flex-wrap: wrap; gap: 8px; font-size: 8px; }
-  .photoLabel { font-size: 9px; }
   .bridgeInner { padding: 29px 16px; }
   .bridgeIndex { font-size: 8px; }
   .bridgeCopy { font-size: 22px; }

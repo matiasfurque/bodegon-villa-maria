@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRef } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -99,10 +99,8 @@ export default function EditorialHero() {
           />
           <div className={styles.photoShade} aria-hidden="true" />
           <div className={styles.photoOutline} aria-hidden="true" data-hero-detail />
-          <p className={styles.photoLabel} data-hero-detail>La casa de Villa María <span>01 / 02</span></p>
           <span className={styles.photoCorner} aria-hidden="true" data-hero-detail>VM<br /><small>2331</small></span>
         </div>
-        <div className={styles.scrollCue} aria-hidden="true" data-hero-detail><span>Descubrí la carta</span><ArrowDown size={17} /></div>
       </section>
 
       <div className={styles.bridge} ref={bridge}>
