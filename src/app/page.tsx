@@ -52,10 +52,11 @@ export default async function HomePage() {
       <section id="menu" className="public-section">
         <div className="section-head">
           <div>
-            <p className="digital-menu-eyebrow">Nuestra carta</p>
-            <h2>Menú digital</h2>
-            <p className="muted">Elegí una categoría y descubrí los sabores de Villa María.</p>
+            <p className="digital-menu-eyebrow">Bodegón Villa María · La carta</p>
+            <h2>Sabores para<br /><em>quedarse.</em></h2>
+            <p className="muted">Explorá nuestra carta por categoría. Cada plato tiene su lugar en la mesa.</p>
           </div>
+          <div className="digital-menu-intro-mark" aria-hidden="true"><span>VM</span><small>LA CARTA<br />MATADEROS</small></div>
         </div>
         {!menuDisponible ? (
           <div className="panel public-empty-state">
